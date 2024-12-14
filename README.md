@@ -1,10 +1,6 @@
-## Blitz3D open source release.
+### Forked from the blitz-research/blitz3d_soloud.
 
-NOTE: This repository is now closed to 3rd party PR's. Unfortunately PR's can't be disabled in github, so please be aware that if you make one it will very probably be closed with no explanation, please don't be offended.
-
-I am still updating this repository occasionally for LibSGD related changes so it will otherwise remain active for a while yet.
-
-### Building Blitz3D from source
+### Building Blitz3D from source on Windows
 
 You will need to install Microsoft Visual Studio, and the CMake and Git utilities. Any recent version of MSVC should be OK, I am currently using Community Edition 2022.
 
@@ -20,6 +16,18 @@ cmake --build cmake-build-release --config Release
 ```
 Assuming all went well, the BLITZ3D_INSTALL directory will contain the final binaries, simply run Blitz3D.exe to get blitzing!
 
+### Building Blitz3D from source on MacOS
+... Coming soon.
+
+
+### Building Blitz3D from source on Linux
+... Coming soon.
+
+
+### Building Blitz3D from source on ARM
+... Coming soon.
+
+
 ### Too lazy to build?
 
-Grab the prebuilt version from https://blitzresearch.itch.io/
+No releases yet...
