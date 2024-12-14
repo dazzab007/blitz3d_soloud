@@ -1,7 +1,6 @@
-### Forked from the blitz-research/blitz3d_soloud.
+Forked from the blitz-research/blitz3d_soloud.
 
 ### Building Blitz3D from source on Windows
-
 You will need to install Microsoft Visual Studio, and the CMake and Git utilities. Any recent version of MSVC should be OK, I am currently using Community Edition 2022.
 
 You will also need to install the following optional MSVC components: "Desktop development with C++", "MFC and ATL support" and "ASP.NET and web development".
