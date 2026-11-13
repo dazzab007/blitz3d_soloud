@@ -46,11 +46,22 @@ set(SRCS
         ${ASRC}/wav/dr_impl.cpp
 )
 
-set(SRCS ${SRCS}
-        ${BACKEND}/xaudio2/soloud_xaudio2.cpp
-        ${BACKEND}/winmm/soloud_winmm.cpp
-)
-set(WITH_BACKENDS WITH_XAUDIO2=1 WITH_WINMM=1)
+if (WIN32)
+    set(SRCS ${SRCS}
+            ${BACKEND}/xaudio2/soloud_xaudio2.cpp
+            ${BACKEND}/winmm/soloud_winmm.cpp
+    )
+    set(WITH_BACKENDS WITH_XAUDIO2=1 WITH_WINMM=1)
+elseif (APPLE)
+    set(SRCS ${SRCS} ${BACKEND}/coreaudio/soloud_coreaudio.cpp)
+    set(WITH_BACKENDS WITH_COREAUDIO=1)
+    set(LIBS ${LIBS} "-framework AudioToolbox" "-framework CoreAudio" "-framework CoreFoundation")
+else ()
+    set(SRCS ${SRCS} ${BACKEND}/miniaudio/soloud_miniaudio.cpp)
+    set(WITH_BACKENDS WITH_MINIAUDIO=1)
+    find_package(Threads REQUIRED)
+    set(LIBS ${LIBS} Threads::Threads ${CMAKE_DL_LIBS} m)
+endif ()
 
 add_library(soloud ${SRCS})
 

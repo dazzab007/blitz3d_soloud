@@ -22,7 +22,7 @@ add_library(debugger MODULE
 	../blitzide/prefs.h
 )
 
-target_compile_options(debugger PRIVATE /Gz)
+bb_target_options(debugger)
 
 # Need this for MFC based DLLs.
 target_compile_definitions(debugger PRIVATE _USRDLL)

@@ -8,6 +8,6 @@ add_executable(bblaunch WIN32
         bblaunch.rc
         )
 
-target_compile_options(bblaunch PRIVATE /Gz)
+bb_target_options(bblaunch)
 
 copy_exe_to_install(bblaunch Blitz3D)

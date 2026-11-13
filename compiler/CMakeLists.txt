@@ -44,6 +44,6 @@ add_library(compiler
 		varnode.h
 )
 
-target_compile_options(compiler PRIVATE /Gz)
+bb_target_options(compiler)
 
 target_link_libraries(compiler stdutil)

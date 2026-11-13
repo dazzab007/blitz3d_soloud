@@ -66,6 +66,6 @@ endif()
 
 add_library(bbruntime ${SRCS})
 
-target_compile_options(bbruntime PRIVATE /Gz)
+bb_target_options(bbruntime)
 
 target_link_libraries(bbruntime ${LIBS})

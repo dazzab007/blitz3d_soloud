@@ -7,5 +7,5 @@ add_library(stdutil
 		stdutil.h
 )
 
-target_compile_options(stdutil PRIVATE /Gz)
+bb_target_options(stdutil)
 

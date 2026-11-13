@@ -81,7 +81,7 @@ add_library(blitz3d
 	world.h
 )
 
-target_compile_options(blitz3d PRIVATE /Gz)
+bb_target_options(blitz3d)
 
 set(LIBS gxruntime ${CMAKE_CURRENT_SOURCE_DIR}/minidx9/lib/d3dxof.lib)
 if(NOT BB_FMOD_ENABLED)

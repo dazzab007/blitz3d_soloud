@@ -8,7 +8,7 @@ add_executable(blitz
 		main.cpp
 )
 
-target_compile_options(blitz PRIVATE /Gz)
+bb_target_options(blitz)
 
 target_link_libraries(blitz compiler)
 

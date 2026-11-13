@@ -60,7 +60,7 @@ endif ()
 
 add_library(gxruntime ${SRCS})
 
-target_compile_options(gxruntime PRIVATE /Gz)
+bb_target_options(gxruntime)
 
 set(LIBS stdutil winmm Ws2_32.lib)
 

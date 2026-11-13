@@ -6,7 +6,7 @@ add_library(linker_dll MODULE
 		linker_dll.cpp
 )
 
-target_compile_options(linker_dll PRIVATE /Gz)
+bb_target_options(linker_dll)
 
 target_link_libraries(linker_dll linker)
 

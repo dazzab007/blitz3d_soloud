@@ -7,4 +7,4 @@ add_library(config
         config.h
 )
 
-target_compile_options(config PRIVATE /Gz)
+bb_target_options(config)

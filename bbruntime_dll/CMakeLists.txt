@@ -9,7 +9,7 @@ add_library(bbruntime_dll MODULE
 	bbruntime_dll.rc
 	resource.h)
 
-target_compile_options(bbruntime_dll PRIVATE /Gz)
+bb_target_options(bbruntime_dll)
 
 target_link_options(bbruntime_dll PRIVATE /SUBSYSTEM:WINDOWS)
 

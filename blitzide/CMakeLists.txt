@@ -26,6 +26,6 @@ add_executable(blitzide WIN32
 	tabber.h
 )
 
-target_compile_options(blitzide PRIVATE /Gz)
+bb_target_options(blitzide)
 
 copy_exe_to_install(blitzide bin/ide)
