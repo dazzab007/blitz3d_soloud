@@ -4,7 +4,12 @@
 #include <set>
 #include <math.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <climits>
+#include <cstdlib>
+#endif
 
 using namespace std;
 
@@ -144,8 +149,13 @@ double atof( const string &s ){
 }
 
 string itoa( int n ){
+#ifdef _WIN32
 	char buff[32];itoa( n,buff,10 );
 	return string( buff );
+#else
+	char buff[32];snprintf( buff,sizeof(buff),"%d",n );
+	return string( buff );
+#endif
 }
 
 /*
@@ -192,6 +202,7 @@ string ftoa( float n ){
 
 	int eNeg = -4, ePos = 8;	// limits for e notation.
 
+#ifdef _WIN32
 	char buffer[50]; // from MSDN example, 25 would probably suffice
 	string t;
 	int dec, sign;
@@ -200,7 +211,7 @@ string ftoa( float n ){
 
 //		if ( digits < 1 ) digits = 1;	// less than one digit is nonsense
 //		if ( digits > 8 ) digits = 8;	// practical maximum for float
-		
+
 		t = _ecvt( n, digits, &dec, &sign );
 
 		if ( dec <= eNeg + 1 || dec > ePos ){
@@ -215,7 +226,7 @@ string ftoa( float n ){
 	
 		if ( dec <= 0 ){
 
-			t = "0." + string( -dec, '0' ) + t;
+			t = "0." + string( (size_t)(-dec), '0' ) + t;
 			dec = 1;	// new location for decimal point
 
 		}
@@ -233,7 +244,7 @@ string ftoa( float n ){
 	
 		// Finally, trim off excess zeroes.
 
-		int dp1 = dec + 1, p = t.length();	
+		int dp1 = dec + 1, p = t.length();
 		while( --p > dp1 && t[p] == '0' );
 		t = string( t, 0, ++p );
 
@@ -246,6 +257,13 @@ string ftoa( float n ){
 	if ( n < 0.0 )		return "-Infinity";
 
 	abort();
+#else
+	//Non-Windows: snprintf with %g matches the e-notation thresholds above
+	//(_ecvt/_gcvt are MSVC CRT functions).
+	char buffer[50];
+	snprintf( buffer,sizeof(buffer),"%.*g",digits,n );
+	return string( buffer );
+#endif
 }
 
 /*
@@ -297,6 +315,7 @@ string toupper( const string &s ){
 	return t;
 }
 
+#ifdef _WIN32
 string fullfilename( const string &t ){
 	char buff[MAX_PATH+1],*p;
 	GetFullPathName( t.c_str(),MAX_PATH,buff,&p );
@@ -316,13 +335,44 @@ string filenamefile( const string &t ){
 	if( !p ) return "";
 	return string( p );
 }
+#else
+//Non-Windows: realpath() resolves the full path (no 260-char limit).
+static bool makeFullpath( const string &t, char *buff, size_t buffsz ){
+	return realpath( t.c_str(), buff )!=NULL;
+}
+
+string fullfilename( const string &t ){
+	char buff[PATH_MAX+1];
+	if( !makeFullpath( t,buff,sizeof(buff) ) ) return t;
+	return string(buff);
+}
+
+string filenamepath( const string &t ){
+	char buff[PATH_MAX+1];
+	if( !makeFullpath( t,buff,sizeof(buff) ) ) return "";
+	string s(buff);
+	size_t pos=s.find_last_of('/');
+	if( pos==string::npos ) return "";
+	return s.substr( 0,pos );
+}
+
+string filenamefile( const string &t ){
+	char buff[PATH_MAX+1];
+	if( !makeFullpath( t,buff,sizeof(buff) ) ) return "";
+	string s(buff);
+	size_t pos=s.find_last_of('/');
+	if( pos==string::npos ) return s;
+	return s.substr( pos+1 );
+}
+#endif
 
 const int MIN_SIZE=256;
 
 qstreambuf::qstreambuf(){
 	buf=d_new char[MIN_SIZE];
-	setg( buf,buf,buf );
-	setp( buf,buf,buf+MIN_SIZE );
+	//std::streambuf::setg/setp are protected; call them explicitly.
+	std::streambuf::setg( buf,buf,buf );
+	std::streambuf::setp( buf,buf+MIN_SIZE );
 }
 
 qstreambuf::~qstreambuf(){
@@ -340,7 +390,7 @@ char *qstreambuf::data(){
 qstreambuf::int_type qstreambuf::underflow(){
 	if( gptr()==egptr() ){
 		if( gptr()==pptr() ) return traits_type::eof();
-		setg( gptr(),gptr(),pptr() );
+		std::streambuf::setg( gptr(),gptr(),pptr() );
 	}
 
 	return traits_type::to_int_type( *gptr() );
@@ -355,8 +405,8 @@ qstreambuf::int_type qstreambuf::overflow( qstreambuf::int_type c ){
 		char *n_buf=d_new char[ n_sz ];
 		memcpy( n_buf,gptr(),sz );
 		delete buf;buf=n_buf;
-		setg( buf,buf,buf+sz );
-		setp( buf+sz,buf+sz,buf+n_sz );
+		std::streambuf::setg( buf,buf,buf+sz );
+		std::streambuf::setp( buf+sz,buf+n_sz );
 	}
 
 	*pptr()=traits_type::to_char_type( c );

@@ -2,6 +2,7 @@
 #include "std.h"
 #include "decl.h"
 #include "type.h"
+#include <cstring>
 
 Decl::~Decl(){
 }

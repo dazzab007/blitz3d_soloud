@@ -55,7 +55,8 @@ void ProgNode::translate( Codegen *g,const vector<UserFunc> &usrfuncs ){
 	if( g->debug ){
 		string t=genLabel();
 		g->s_data( "<main program>",t );
-		g->code( call( "__bbDebugEnter",local(0),iconst((int)sem_env),global(t) ) );
+		//TODO(handle-table): sem_env is a pointer; on 64-bit this no longer fits in the 32-bit int.
+		g->code( call( "__bbDebugEnter",local(0),iconst((int)(intptr_t)sem_env),global(t) ) );
 	}
 
 	//no user funcs used!

@@ -3,6 +3,13 @@
 #include "codegen_x86.h"
 #include "tile.h"
 
+//MSVC's itoa(int,char*,int) doesn't exist on other platforms.
+#ifdef _WIN32
+static void itoa3( int n, char *buff, size_t sz ){ itoa( n,buff,10 ); }
+#else
+static void itoa3( int n, char *buff, size_t sz ){ snprintf( buff,sz,"%d",n ); }
+#endif
+
 //reduce to 3 for stress test
 static const int NUM_REGS=6;
 
@@ -41,13 +48,13 @@ static void freeReg( int n ){
 static void pushReg( int n ){
 	frameSize+=4;
 	if( frameSize>maxFrameSize ) maxFrameSize=frameSize;
-	char buff[32];itoa( frameSize,buff,10 );
+	char buff[32];itoa3( frameSize,buff,sizeof(buff) );
 	string s="\tmov\t[ebp-";s+=buff;s+="],";s+=regs[n];s+='\n';
 	codeFrags.push_back( s );
 }
 
 static void popReg( int n ){
-	char buff[32];itoa( frameSize,buff,10 );
+	char buff[32];itoa3( frameSize,buff,sizeof(buff) );
 	string s="\tmov\t";s+=regs[n];s+=",[ebp-";s+=buff;s+="]\n";
 	codeFrags.push_back( s );
 	frameSize-=4;
@@ -190,8 +197,10 @@ void Codegen_x86::code( TNode *stmt ){
 }
 
 static string fixEsp( int esp_off ){
-	if( esp_off<0 ) return "\tsub\tesp,"+itoa(-esp_off)+"\n";
-	return "\tadd\tesp,"+itoa(esp_off)+"\n";
+	char buff[32];
+	itoa3( esp_off,buff,sizeof(buff) );
+	if( esp_off<0 ) return "\tsub\tesp,"+string(buff)+"\n";
+	return "\tadd\tesp,"+string(buff)+"\n";
 }
 
 void Codegen_x86::leave( TNode *cleanup,int pop_sz ){
@@ -252,13 +261,13 @@ void Codegen_x86::label( const string &l ){
 }
 
 void Codegen_x86::align_data( int n ){
-	char buff[32];itoa( n,buff,10 );
+	char buff[32];itoa3( n,buff,sizeof(buff) );
 	dataFrags.push_back( string( "\t.align\t" )+buff+'\n' );
 }
 
 void Codegen_x86::i_data( int i,const string &l ){
 	if( l.size() ) dataFrags.push_back( l );
-	char buff[32];itoa( i,buff,10 );
+	char buff[32];itoa3( i,buff,sizeof(buff) );
 	dataFrags.push_back( string( "\t.dd\t" )+buff+'\n' );
 }
 

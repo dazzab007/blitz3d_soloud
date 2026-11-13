@@ -133,7 +133,8 @@ void FuncDeclNode::translate( Codegen *g ){
 	if( g->debug ){
 		string t=genLabel();
 		g->s_data( ident,t );
-		g->code( call( "__bbDebugEnter",local(0),iconst((int)sem_env),global(t) ) );
+		//TODO(handle-table): sem_env is a pointer; on 64-bit this no longer fits in the 32-bit int.
+		g->code( call( "__bbDebugEnter",local(0),iconst((int)(intptr_t)sem_env),global(t) ) );
 	}
 
 	//translate statements

@@ -121,9 +121,13 @@ void Parser::parseStmtSeq( StmtSeqNode *stmts,int scope ){
 				string inc=toker->text();toker->next();
 				inc=inc.substr( 1,inc.size()-2 );
 
-				//WIN32 KLUDGE//
+				//resolve the include path to a full filename (case-insensitive dedup below)
+#ifdef _WIN32
 				char buff[MAX_PATH],*p;
 				if( GetFullPathName( inc.c_str(),MAX_PATH,buff,&p ) ) inc=buff;
+#else
+				inc=fullfilename( inc );
+#endif
 				inc=tolower(inc);
 
 				if( included.find( inc )!=included.end() ) break;

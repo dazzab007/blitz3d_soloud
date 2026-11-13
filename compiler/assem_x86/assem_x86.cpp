@@ -25,8 +25,8 @@ Assem_x86::Assem_x86( istream &in,Module *mod ):Assem(in,mod){
 
 	//build instruction map, if not built already.
 	if( !instMap.size() ){
-		for( int k=0;!insts[k].name || insts[k].name[0];++k ){
-			if( insts[k].name ) instMap.insert( InstPair( insts[k].name,&insts[k] ) );
+		for( int k=0;insts[k].lmode==-1 || insts[k].name[0];++k ){
+			if( insts[k].lmode!=-1 ) instMap.insert( InstPair( insts[k].name,&insts[k] ) );
 		}
 	}
 }
@@ -133,7 +133,7 @@ void Assem_x86::assemInst( const string &name,const string &lhs,const string &rh
 		inst=it->second;
 		for(;;){
 			if( (lop.mode&inst->lmode) && (rop.mode&inst->rmode) ) break;
-			if( (++inst)->name ) throw Ex( "illegal addressing mode" );
+			if( (++inst)->lmode!=-1 ) throw Ex( "illegal addressing mode" );
 		}
 	}
 

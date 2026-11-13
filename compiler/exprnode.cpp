@@ -4,6 +4,11 @@
 
 #include <math.h>
 #include <float.h>
+#ifdef _WIN32
+#include <float.h> // _control87, _RC_NEAR etc.
+#else
+#include <cfenv>
+#endif
 
 //////////////////////////////////
 // Cast an expression to a type //
@@ -236,7 +241,9 @@ TNode *FloatConstNode::translate( Codegen *g ){
 
 int FloatConstNode::intValue(){
 	float flt=value;
+#ifdef _WIN32
 	int temp;
+	//round to nearest, 24-bit precision, mask all FPU exceptions (matches original)
 	_control87( _RC_NEAR|_PC_24|_EM_INVALID|_EM_ZERODIVIDE|_EM_OVERFLOW|_EM_UNDERFLOW|_EM_INEXACT|_EM_DENORMAL,0xfffff );
 	_asm{
 		fld [flt];
@@ -244,6 +251,11 @@ int FloatConstNode::intValue(){
 	}
 	_control87( _CW_DEFAULT,0xfffff );
 	return temp;
+#else
+	//Non-Windows: FE_TONEAREST is the default rounding mode and exceptions are
+	//masked by default, so lrintf reproduces the FPU fistp behaviour.
+	return (int)lrintf( flt );
+#endif
 }
 
 float FloatConstNode::floatValue(){
