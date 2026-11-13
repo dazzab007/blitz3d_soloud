@@ -2,6 +2,8 @@
 #ifndef INSTS_H
 #define INSTS_H
 
+#include <climits>
+
 //operand addressing modes
 enum{
 	REG=0x0001,REG8=0x0002,REG16=0x0004,REG32=0x0008,
@@ -13,7 +15,7 @@ enum{
 	CL=0x80000,CX=0x100000,ECX=0x200000,
 	ST0=0x400000,FPUREG=0x800000,
 
-	NONE=-2147483648	// 0x80000000 as a signed int (no narrowing conversion)
+	NONE=INT_MIN		// 0x80000000 as a signed int (no narrowing conversion)
 };
 
 //flags
