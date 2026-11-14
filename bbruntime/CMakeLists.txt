@@ -64,7 +64,23 @@ elseif(BB_LIBSGD_ENABLED)
 
 endif()
 
-add_library(bbruntime ${SRCS})
+if (BB_PORTABLE_BUILD)
+	# Handle table core (macOS 64-bit only; no-op on _WIN32).
+	add_library(bb_handle bb_handle.cpp bb_handle.h)
+	bb_target_options(bb_handle)
+
+	# Unit tests for the handle table (no graphics/audio dependencies).
+	add_executable(test_handle_table ../tests/test_handle_table.cpp)
+	bb_target_options(test_handle_table)
+	target_link_libraries(test_handle_table bb_handle)
+
+	# In the portable build, only the handle-table core is available.
+	# The full bbruntime library needs Windows headers (gxruntime, etc.)
+	# which are not yet ported.
+	return()
+endif ()
+
+add_library(bbruntime ${SRCS} bb_handle.cpp)
 
 bb_target_options(bbruntime)
 
