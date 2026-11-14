@@ -2,6 +2,7 @@
 #include "std.h"
 #include "bbbank.h"
 #include "bbstream.h"
+#include "bb_handle.h"
 
 struct bbBank{
 	char *data;
@@ -13,6 +14,9 @@ struct bbBank{
 		memset( data,0,size );
 	}
 	virtual ~bbBank(){
+#ifndef _WIN32
+		g_handle_table.forget(this);
+#endif
 		delete[] data;
 	}
 	void resize( int n ){
@@ -31,6 +35,8 @@ struct bbBank{
 	}
 };
 
+#include "bb_handle_types.h"
+
 static set<bbBank*> bank_set;
 
 static inline void debugBank( bbBank *b ){
@@ -46,72 +52,87 @@ static inline void debugBank( bbBank *b,int offset ){
 	}
 }
 
-bbBank *bbCreateBank( int size ){
+BB_HANDLE(bbBank) bbCreateBank( int size ){
 	bbBank *b=d_new bbBank( size );
 	bank_set.insert( b );
-	return b;
+	return BB_HANDLE(bbBank)( b );
 }
 
-void bbFreeBank( bbBank *b ){
+void bbFreeBank( BB_HANDLE(bbBank) h ){
+	bbBank *b=h;
 	if( bank_set.erase( b ) ) delete b;
 }
 
-int bbBankSize( bbBank *b ){
+int bbBankSize( BB_HANDLE(bbBank) h ){
+	bbBank *b=h;
 	debugBank( b );
 	return b->size;
 }
 
-void  bbResizeBank( bbBank *b,int size ){
+void  bbResizeBank( BB_HANDLE(bbBank) h,int size ){
+	bbBank *b=h;
 	debugBank( b );
 	b->resize( size );
 }
 
-void  bbCopyBank( bbBank *src,int src_p,bbBank *dest,int dest_p,int count ){
+void  bbCopyBank( BB_HANDLE(bbBank) src_h,int src_p,BB_HANDLE(bbBank) dest_h,int dest_p,int count ){
+	bbBank *src=src_h;
+	bbBank *dest=dest_h;
 	if( debug ){ debugBank( src,src_p+count-1 );debugBank( dest,dest_p+count-1 ); }
 	memmove( dest->data+dest_p,src->data+src_p,count );
 }
 
-int  bbPeekByte( bbBank *b,int offset ){
+int  bbPeekByte( BB_HANDLE(bbBank) h,int offset ){
+	bbBank *b=h;
 	debugBank( b,offset );
 	return *(unsigned char*)(b->data+offset);
 }
 
-int  bbPeekShort( bbBank *b,int offset ){
+int  bbPeekShort( BB_HANDLE(bbBank) h,int offset ){
+	bbBank *b=h;
 	debugBank( b,offset+1 );
 	return *(unsigned short*)(b->data+offset);
 }
 
-int  bbPeekInt( bbBank *b,int offset ){
+int  bbPeekInt( BB_HANDLE(bbBank) h,int offset ){
+	bbBank *b=h;
 	debugBank( b,offset+3 );
 	return *(int*)(b->data+offset);
 }
 
-float  bbPeekFloat( bbBank *b,int offset ){
+float  bbPeekFloat( BB_HANDLE(bbBank) h,int offset ){
+	bbBank *b=h;
 	debugBank( b,offset+3 );
 	return *(float*)(b->data+offset);
 }
 
-void  bbPokeByte( bbBank *b,int offset,int value ){
+void  bbPokeByte( BB_HANDLE(bbBank) h,int offset,int value ){
+	bbBank *b=h;
 	debugBank( b,offset );
 	*(char*)(b->data+offset)=value;
 }
 
-void  bbPokeShort( bbBank *b,int offset,int value ){
+void  bbPokeShort( BB_HANDLE(bbBank) h,int offset,int value ){
+	bbBank *b=h;
 	debugBank( b,offset );
 	*(unsigned short*)(b->data+offset)=value;
 }
 
-void  bbPokeInt( bbBank *b,int offset,int value ){
+void  bbPokeInt( BB_HANDLE(bbBank) h,int offset,int value ){
+	bbBank *b=h;
 	debugBank( b,offset );
 	*(int*)(b->data+offset)=value;
 }
 
-void  bbPokeFloat( bbBank *b,int offset,float value ){
+void  bbPokeFloat( BB_HANDLE(bbBank) h,int offset,float value ){
+	bbBank *b=h;
 	debugBank( b,offset );
 	*(float*)(b->data+offset)=value;
 }
 
-int   bbReadBytes( bbBank *b,bbStream *s,int offset,int count ){
+int   bbReadBytes( BB_HANDLE(bbBank) h,BB_HANDLE(bbStream) s_h,int offset,int count ){
+	bbBank *b=h;
+	bbStream *s=s_h;
 	if( debug ){
 		debugBank( b,offset+count-1 );
 		debugStream( s );
@@ -119,7 +140,9 @@ int   bbReadBytes( bbBank *b,bbStream *s,int offset,int count ){
 	return s->read( b->data+offset,count );
 }
 
-int   bbWriteBytes( bbBank *b,bbStream *s,int offset,int count ){
+int   bbWriteBytes( BB_HANDLE(bbBank) h,BB_HANDLE(bbStream) s_h,int offset,int count ){
+	bbBank *b=h;
+	bbStream *s=s_h;
 	if( debug ){
 		debugBank( b,offset+count-1 );
 		debugStream( s );
@@ -127,7 +150,9 @@ int   bbWriteBytes( bbBank *b,bbStream *s,int offset,int count ){
 	return s->write( b->data+offset,count );
 }
 
-int  bbCallDLL( BBStr *dll,BBStr *fun,bbBank *in,bbBank *out ){
+int  bbCallDLL( BBStr *dll,BBStr *fun,BB_HANDLE(bbBank) in_h,BB_HANDLE(bbBank) out_h ){
+	bbBank *in=in_h;
+	bbBank *out=out_h;
 	if( debug ){
 		if( in ) debugBank( in );
 		if( out ) debugBank( out );
@@ -144,7 +169,13 @@ bool bank_create(){
 }
 
 bool bank_destroy(){
-	while( bank_set.size() ) bbFreeBank( *bank_set.begin() );
+	while( bank_set.size() ){
+#ifndef _WIN32
+		bbFreeBank( BB_HANDLE(bbBank)( *bank_set.begin() ) );
+#else
+		bbFreeBank( *bank_set.begin() );
+#endif
+	}
 	return true;
 }
 

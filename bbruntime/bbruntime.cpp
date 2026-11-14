@@ -1,6 +1,9 @@
 #include "std.h"
 #include "bbsys.h"
 #include "bbruntime.h"
+#ifndef _WIN32
+#include "bb_handle.h"
+#endif
 
 void bbEnd()
 {
@@ -318,10 +321,20 @@ bool bbruntime_destroy()
     return true;
 }
 
+#ifndef _WIN32
+static void handle_error_rtex(const char *msg) {
+	RTEX(msg);
+}
+#endif
+
 const char* bbruntime_run(gxRuntime* rt, void (*pc)(), bool dbg)
 {
     debug = dbg;
     gx_runtime = rt;
+#ifndef _WIN32
+    bb_handle_debug = dbg;
+    bb_handle_error = handle_error_rtex;
+#endif
 
     if (!bbruntime_create()) return "Unable to start program";
     const char* t = 0;

@@ -74,6 +74,11 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_handle_table)
 	target_link_libraries(test_handle_table bb_handle)
 
+	# bbbank integration test (self-contained: stubs gx_runtime/debug).
+	add_executable(test_bbbank ../tests/test_bbbank.cpp)
+	bb_target_options(test_bbbank)
+	target_link_libraries(test_bbbank bb_handle)
+
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
 	# which are not yet ported.
