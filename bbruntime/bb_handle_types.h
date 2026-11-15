@@ -8,6 +8,8 @@
 
 #include "bb_handle.h"
 
+#ifndef _WIN32
+
 // ---- Entity family ----
 class Entity;
 class Object;
@@ -53,7 +55,7 @@ template <> struct handle_type_tag<Listener>   { static const int value = HT_ENT
 
 // ---- Stream family ----
 class bbStream;
-class bbFile;
+struct bbFile;
 class TCPStream;
 class UDPStream;
 
@@ -77,8 +79,8 @@ class gxCanvas;
 class gxFont;
 class gxMovie;
 class gxDir;
-class bbBank;
-class Sound;
+struct bbBank;
+struct Sound;
 class gxSound;
 class gxTimer;
 
@@ -99,5 +101,7 @@ template <> struct handle_type_tag<gxTimer>   { static const int value = HT_TIME
 // ---- Sound family (both backends) ----
 template <> struct handle_family<Sound>   { typedef Sound base; };
 template <> struct handle_family<gxSound> { typedef gxSound base; };
+
+#endif // _WIN32
 
 #endif // BB_HANDLE_TYPES_H
