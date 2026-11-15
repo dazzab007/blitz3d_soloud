@@ -175,14 +175,6 @@ bool bank_destroy(){
 	return true;
 }
 
-// On macOS, BB_HANDLE(T) is bbH<T> (a struct), so function pointers with
-// BB_HANDLE params can't implicitly convert to void*. Cast through reinterpret_cast.
-#ifdef _WIN32
-#define RTSYM_CAST(f) f
-#else
-#define RTSYM_CAST(f) (void*)(f)
-#endif
-
 void bank_link( void(*rtSym)(const char*,void*) ){
 	rtSym( "%CreateBank%size=0",RTSYM_CAST(bbCreateBank) );
 	rtSym( "FreeBank%bank",RTSYM_CAST(bbFreeBank) );

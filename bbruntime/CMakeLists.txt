@@ -70,9 +70,14 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(bb_handle)
 
 	# Portable bbruntime: files that compile on macOS without Windows headers.
-	add_library(bbruntime_core bbbank.cpp bb_handle.cpp)
+	add_library(bbruntime_core bbbank.cpp bbstream.cpp bbfilesystem.cpp bb_handle.cpp)
 	bb_target_options(bbruntime_core)
 	target_link_libraries(bbruntime_core bb_handle)
+
+	# Stream + filesystem handle-table integration test.
+	add_executable(test_bbstream ../tests/test_bbstream.cpp ../tests/stubs_gxruntime.cpp)
+	bb_target_options(test_bbstream)
+	target_link_libraries(test_bbstream bbruntime_core)
 
 	# Unit tests for the handle table (no graphics/audio dependencies).
 	add_executable(test_handle_table ../tests/test_handle_table.cpp)

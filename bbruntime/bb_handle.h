@@ -32,6 +32,8 @@ template <typename T> struct handle_type_tag { static const int value; };
 #ifdef _WIN32
 // Windows 32-bit: handle IS the pointer. No table, no lookup, no wrapper.
 #define BB_HANDLE(T) T*
+// rtSym stores function pointers as void*; plain T* signatures convert implicitly.
+#define RTSYM_CAST(f) f
 #else
 // macOS 64-bit: handle is a 4-byte unsigned int.
 // Layout: bit 31 = 0, bits 30..11 = index (20 bits), bits 10..0 = generation (11 bits).
@@ -100,6 +102,9 @@ struct bbH {
 static_assert(sizeof(bbH<int>) == 4, "bbH<int> must be 4 bytes on macOS");
 
 #define BB_HANDLE(T) bbH<T>
+// On macOS, BB_HANDLE(T) is bbH<T> (a struct), so function pointers with
+// BB_HANDLE params can't implicitly convert to void*. Cast through reinterpret_cast.
+#define RTSYM_CAST(f) (void*)(f)
 #endif
 
 #endif // BB_HANDLE_H

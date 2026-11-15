@@ -1,6 +1,8 @@
 
 #include "std.h"
 #include "bbstream.h"
+#include "bb_handle.h"
+#include "bb_handle_types.h"
 
 static set<bbStream*> stream_set;
 
@@ -14,48 +16,58 @@ bbStream::bbStream(){
 }
 
 bbStream::~bbStream(){
+#ifndef _WIN32
+	g_handle_table.forget( this );
+#endif
 	stream_set.erase( this );
 }
 
-int bbEof( bbStream *s ){
+int bbEof( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	return s->eof();
 }
 
-int bbReadAvail( bbStream *s ){
+int bbReadAvail( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	return s->avail();
 }
 
-int bbReadByte( bbStream *s ){
+int bbReadByte( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	int n=0;
 	s->read( (char*)&n,1 );
 	return n;
 }
 
-int bbReadShort( bbStream *s ){
+int bbReadShort( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	int n=0;
 	s->read( (char*)&n,2 );
 	return n;
 }
 
-int bbReadInt( bbStream *s ){
+int bbReadInt( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	int n=0;
 	s->read( (char*)&n,4 );
 	return n;
 }
 
-float bbReadFloat( bbStream *s ){
+float bbReadFloat( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	float n=0;
 	s->read( (char*)&n,4 );
 	return n;
 }
 
-BBStr *bbReadString( bbStream *s ){
+BBStr *bbReadString( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	int len;
 	BBStr *str=d_new BBStr();
@@ -69,7 +81,8 @@ BBStr *bbReadString( bbStream *s ){
 	return str;
 }
 
-BBStr *bbReadLine( bbStream *s ){
+BBStr *bbReadLine( BB_HANDLE(bbStream) s_h ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	unsigned char c;
 	BBStr *str=d_new BBStr();
@@ -81,27 +94,32 @@ BBStr *bbReadLine( bbStream *s ){
 	return str;
 }
 
-void bbWriteByte( bbStream *s,int n ){
+void bbWriteByte( BB_HANDLE(bbStream) s_h,int n ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	s->write( (char*)&n,1 );
 }
 
-void bbWriteShort( bbStream *s,int n ){
+void bbWriteShort( BB_HANDLE(bbStream) s_h,int n ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	s->write( (char*)&n,2 );
 }
 
-void bbWriteInt( bbStream *s,int n ){
+void bbWriteInt( BB_HANDLE(bbStream) s_h,int n ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	s->write( (char*)&n,4 );
 }
 
-void bbWriteFloat( bbStream *s,float n ){
+void bbWriteFloat( BB_HANDLE(bbStream) s_h,float n ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	s->write( (char*)&n,4 );
 }
 
-void bbWriteString( bbStream *s,BBStr *t ){
+void bbWriteString( BB_HANDLE(bbStream) s_h,BBStr *t ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	int n=t->size();
 	s->write( (char*)&n,4 );
@@ -109,14 +127,17 @@ void bbWriteString( bbStream *s,BBStr *t ){
 	delete t;
 }
 
-void bbWriteLine( bbStream *s,BBStr *t ){
+void bbWriteLine( BB_HANDLE(bbStream) s_h,BBStr *t ){
+	bbStream *s=s_h;
 	if( debug ) debugStream( s );
 	s->write( t->data(),t->size() );
 	s->write( "\r\n",2 );
 	delete t;
 }
 
-void bbCopyStream( bbStream *s,bbStream *d,int buff_size ){
+void bbCopyStream( BB_HANDLE(bbStream) s_h,BB_HANDLE(bbStream) d_h,int buff_size ){
+	bbStream *s=s_h;
+	bbStream *d=d_h;
 	if( debug ){
 		debugStream( s );debugStream( d ); 
 		if( buff_size<1 || buff_size>1024*1024 ) RTEX( "Illegal buffer size" );
@@ -139,21 +160,21 @@ bool stream_destroy(){
 }
 
 void stream_link( void(*rtSym)(const char*,void*) ){
-	rtSym( "%Eof%stream",bbEof );
-	rtSym( "%ReadAvail%stream",bbReadAvail );
-	rtSym( "%ReadByte%stream",bbReadByte );
-	rtSym( "%ReadShort%stream",bbReadShort );
-	rtSym( "%ReadInt%stream",bbReadInt );
-	rtSym( "#ReadFloat%stream",bbReadFloat );
-	rtSym( "$ReadString%stream",bbReadString );
-	rtSym( "$ReadLine%stream",bbReadLine );
-	rtSym( "WriteByte%stream%byte",bbWriteByte );
-	rtSym( "WriteShort%stream%short",bbWriteShort );
-	rtSym( "WriteInt%stream%int",bbWriteInt );
-	rtSym( "WriteFloat%stream#float",bbWriteFloat );
-	rtSym( "WriteString%stream$string",bbWriteString );
-	rtSym( "WriteLine%stream$string",bbWriteLine );
-	rtSym( "CopyStream%src_stream%dest_stream%buffer_size=16384",bbCopyStream );
+	rtSym( "%Eof%stream",RTSYM_CAST(bbEof) );
+	rtSym( "%ReadAvail%stream",RTSYM_CAST(bbReadAvail) );
+	rtSym( "%ReadByte%stream",RTSYM_CAST(bbReadByte) );
+	rtSym( "%ReadShort%stream",RTSYM_CAST(bbReadShort) );
+	rtSym( "%ReadInt%stream",RTSYM_CAST(bbReadInt) );
+	rtSym( "#ReadFloat%stream",RTSYM_CAST(bbReadFloat) );
+	rtSym( "$ReadString%stream",RTSYM_CAST(bbReadString) );
+	rtSym( "$ReadLine%stream",RTSYM_CAST(bbReadLine) );
+	rtSym( "WriteByte%stream%byte",RTSYM_CAST(bbWriteByte) );
+	rtSym( "WriteShort%stream%short",RTSYM_CAST(bbWriteShort) );
+	rtSym( "WriteInt%stream%int",RTSYM_CAST(bbWriteInt) );
+	rtSym( "WriteFloat%stream#float",RTSYM_CAST(bbWriteFloat) );
+	rtSym( "WriteString%stream$string",RTSYM_CAST(bbWriteString) );
+	rtSym( "WriteLine%stream$string",RTSYM_CAST(bbWriteLine) );
+	rtSym( "CopyStream%src_stream%dest_stream%buffer_size=16384",RTSYM_CAST(bbCopyStream) );
 }
 
 

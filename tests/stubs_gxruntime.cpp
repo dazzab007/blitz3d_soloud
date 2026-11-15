@@ -4,6 +4,7 @@
 // Used ONLY by test targets (test_bbbank) in the portable build.
 
 #include "../gxruntime/gxruntime.h"
+#include "../gxruntime/gxfilesystem.h"
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
 #include "../bbruntime/bbstream.h"
@@ -27,10 +28,37 @@ int gxRuntime::callDll(const std::string &dll, const std::string &func,
 	return 0;
 }
 
-// Stub for debugStream (normally in bbstream.cpp).
-void debugStream(bbStream *s) {
-	(void)s;
+// NOTE: debugStream is now in bbruntime_core (bbstream.cpp), so no stub needed.
+
+// gxFileSystem stubs (normally in gxruntime/gxfilesystem.cpp, which is
+// Windows-only via <windows.h>). Used only by test binaries.
+gxFileSystem::gxFileSystem() {}
+gxFileSystem::~gxFileSystem() {}
+bool gxFileSystem::createDir(const std::string &dir) { (void)dir; return false; }
+bool gxFileSystem::deleteDir(const std::string &dir) { (void)dir; return false; }
+bool gxFileSystem::createFile(const std::string &file) { (void)file; return false; }
+bool gxFileSystem::deleteFile(const std::string &file) { (void)file; return false; }
+bool gxFileSystem::copyFile(const std::string &src, const std::string &dest) { (void)src; (void)dest; return false; }
+bool gxFileSystem::renameFile(const std::string &src, const std::string &dest) { (void)src; (void)dest; return false; }
+bool gxFileSystem::setCurrentDir(const std::string &dir) { (void)dir; return false; }
+std::string gxFileSystem::getCurrentDir()const { return "."; }
+int gxFileSystem::getFileSize(const std::string &name)const { (void)name; return 0; }
+int gxFileSystem::getFileType(const std::string &name)const { (void)name; return FILE_TYPE_NONE; }
+gxDir *gxFileSystem::openDir(const std::string &name, int flags) { (void)name; (void)flags; return 0; }
+gxDir *gxFileSystem::verifyDir(gxDir *d) { return d; }
+void gxFileSystem::closeDir(gxDir *dir) { (void)dir; }
+
+// gxDir stub (normally in gxruntime/gxdir.cpp, Windows-only).
+gxDir::~gxDir() {}
+std::string gxDir::getNextFile() { return ""; }
+
+// gxRuntime filesystem stubs (normally in gxruntime.cpp, Windows-only).
+gxFileSystem *gxRuntime::openFileSystem(int flags) {
+	(void)flags;
+	static gxFileSystem fs;
+	return &fs;
 }
+void gxRuntime::closeFileSystem(gxFileSystem *filesys) { (void)filesys; }
 
 // BBStr stubs (normally in basic.cpp).
 BBStr::BBStr() : std::string(), next(0), prev(0) {}

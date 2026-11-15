@@ -2,6 +2,8 @@
 #include "std.h"
 #include "bbfilesystem.h"
 #include "bbstream.h"
+#include "bb_handle.h"
+#include "bb_handle_types.h"
 #include <fstream>
 
 gxFileSystem *gx_filesys;
@@ -11,6 +13,9 @@ struct bbFile : public bbStream{
 	bbFile( filebuf *f ):buf(f){
 	}
 	~bbFile(){
+#ifndef _WIN32
+		g_handle_table.forget( this );
+#endif
 		delete buf;
 	}
 	int read( char *buff,int size ){
@@ -53,42 +58,59 @@ static bbFile *open( BBStr *f,int n ){
 	return 0;
 }
 
-bbFile *bbReadFile( BBStr *f ){
-	return open( f,ios_base::in );
+BB_HANDLE(bbFile) bbReadFile( BBStr *f ){
+	bbFile *r=open( f,ios_base::in );
+	return r;
 }
 
-bbFile *bbWriteFile( BBStr *f ){
-	return open( f,ios_base::out|ios_base::trunc );
+BB_HANDLE(bbFile) bbWriteFile( BBStr *f ){
+	bbFile *r=open( f,ios_base::out|ios_base::trunc );
+	return r;
 }
 
-bbFile *bbOpenFile( BBStr *f ){
-	return open( f,ios_base::in|ios_base::out );
+BB_HANDLE(bbFile) bbOpenFile( BBStr *f ){
+	bbFile *r=open( f,ios_base::in|ios_base::out );
+	return r;
 }
 
-void bbCloseFile( bbFile *f ){
+void bbCloseFile( BB_HANDLE(bbStream) s_h ){
+	// A file handle is a stream-family handle (bbFile upcasts to bbStream).
+	bbStream *s=s_h;
+#ifndef _WIN32
+	if( !s ) return;
+#endif
+	bbFile *f=(bbFile*)s;
 	debugFile( f );
 	file_set.erase( f );
 	delete f;
 }
 
-int bbFilePos( bbFile *f ){
+int bbFilePos( BB_HANDLE(bbFile) f_h ){
+	bbFile *f=f_h;
 	return f->buf->pubseekoff( 0,ios_base::cur );
 }
 
-int bbSeekFile( bbFile *f,int pos ){
+int bbSeekFile( BB_HANDLE(bbFile) f_h,int pos ){
+	bbFile *f=f_h;
 	return f->buf->pubseekoff( pos,ios_base::beg );
 }
 
-gxDir *bbReadDir( BBStr *d ){
+BB_HANDLE(gxDir) bbReadDir( BBStr *d ){
 	string t=*d;delete d;
 	return gx_filesys->openDir( t,0 );
 }
 
-void bbCloseDir( gxDir *d ){
+void bbCloseDir( BB_HANDLE(gxDir) d_h ){
+	gxDir *d=d_h;
+#ifndef _WIN32
+	if( !d ) return;
+	g_handle_table.forget( d );
+#endif
 	gx_filesys->closeDir( d );
 }
 
-BBStr *bbNextFile( gxDir *d ){
+BBStr *bbNextFile( BB_HANDLE(gxDir) d_h ){
+	gxDir *d=d_h;
 	debugDir( d );
 	return d_new BBStr( d->getNextFile() );
 }
@@ -148,23 +170,23 @@ bool filesystem_destroy(){
 }
 
 void filesystem_link( void(*rtSym)(const char*,void*) ){
-	rtSym( "%OpenFile$filename",bbOpenFile );
-	rtSym( "%ReadFile$filename",bbReadFile );
-	rtSym( "%WriteFile$filename",bbWriteFile );
-	rtSym( "CloseFile%file_stream",bbCloseFile );
-	rtSym( "%FilePos%file_stream",bbFilePos );
-	rtSym( "%SeekFile%file_stream%pos",bbSeekFile );
+	rtSym( "%OpenFile$filename",RTSYM_CAST(bbOpenFile) );
+	rtSym( "%ReadFile$filename",RTSYM_CAST(bbReadFile) );
+	rtSym( "%WriteFile$filename",RTSYM_CAST(bbWriteFile) );
+	rtSym( "CloseFile%file_stream",RTSYM_CAST(bbCloseFile) );
+	rtSym( "%FilePos%file_stream",RTSYM_CAST(bbFilePos) );
+	rtSym( "%SeekFile%file_stream%pos",RTSYM_CAST(bbSeekFile) );
 
-	rtSym( "%ReadDir$dirname",bbReadDir );
-	rtSym( "CloseDir%dir",bbCloseDir );
-	rtSym( "$NextFile%dir",bbNextFile );
-	rtSym( "$CurrentDir",bbCurrentDir );
-	rtSym( "ChangeDir$dir",bbChangeDir );
-	rtSym( "CreateDir$dir",bbCreateDir );
-	rtSym( "DeleteDir$dir",bbDeleteDir );
+	rtSym( "%ReadDir$dirname",RTSYM_CAST(bbReadDir) );
+	rtSym( "CloseDir%dir",RTSYM_CAST(bbCloseDir) );
+	rtSym( "$NextFile%dir",RTSYM_CAST(bbNextFile) );
+	rtSym( "$CurrentDir",RTSYM_CAST(bbCurrentDir) );
+	rtSym( "ChangeDir$dir",RTSYM_CAST(bbChangeDir) );
+	rtSym( "CreateDir$dir",RTSYM_CAST(bbCreateDir) );
+	rtSym( "DeleteDir$dir",RTSYM_CAST(bbDeleteDir) );
 
-	rtSym( "%FileSize$file",bbFileSize );
-	rtSym( "%FileType$file",bbFileType );
-	rtSym( "CopyFile$file$to",bbCopyFile );
-	rtSym( "DeleteFile$file",bbDeleteFile );
+	rtSym( "%FileSize$file",RTSYM_CAST(bbFileSize) );
+	rtSym( "%FileType$file",RTSYM_CAST(bbFileType) );
+	rtSym( "CopyFile$file$to",RTSYM_CAST(bbCopyFile) );
+	rtSym( "DeleteFile$file",RTSYM_CAST(bbDeleteFile) );
 }
