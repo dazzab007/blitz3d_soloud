@@ -1,0 +1,26 @@
+# Decisions
+
+- Handle table: `vector<Entry> by_handle` (index = offset) + `unordered_map<void*,unsigned> by_ptr` keyed on family base pointer. 20-bit index + 11-bit generation, handle never 0.
+- Type tags are per FAMILY (HT_ENTITY, HT_STREAM, HT_TCP_SERVER, etc.), not per class. `handle_type_tag<T>` maps each subclass to its family.
+- Pointer normalisation: store and key by_ptr on the family BASE pointer (Entity*, bbStream*). `bbH<T>` converts T*→Base* in, `static_cast<T*>(static_cast<Base*>(vp))` out. Never static_cast from void*.
+- Windows: `BB_HANDLE(T)` is plain `T*`. No struct, no table. Zero behavioural change.
+- Validation uses the runtime `debug` flag (same as debugEntity/debugTexture), not #ifdef DEBUG. Release: invalid handle → null.
+- `forget()` lives in family base destructors we own (~Entity, ~bbStream, ~Surface, ~Texture, ~Brush, ~bbImage, ~bbBank, ~Sound). Wrapper-side forget only for gx-owned objects (font, movie, dir, timer, canvases).
+- Texture/Brush use ref-counted Rep; forget() goes in ~Texture/~Brush (outer object), not ~Rep. Surface forget in ~Surface covers MeshModel::Rep::~Rep path.
+- Canvas forget: bbImage frames in ~bbImage; texture canvases in CachedTexture::~CachedTexture; front/back via explicit forget() in bbEndGraphics/bbGraphics.
+- Soloud backend channels are already 32-bit ints — no handle wrapping needed.
+- `sem_env` fix: minimal `DebugEnvTable` (int id → pointer) in bbruntime, populated at load time.
+- Testing: C++ unit tests calling bb* functions directly (.bb programs can't run until x86-64 codegen + loader exist). Build: `cmake --build build -- -k 0`.
+- Commit sequence: 9 commits, core+tests first, then pilot (bbbank), then by module, ~5 files max per commit.
+- `forget()` sets `base_ptr = 0` to mark slot free; generation persists for wrap (2047→1). Free-slot detection is `base_ptr == 0`, not `generation == 0`.
+- Type specialisations split into `bb_handle_types.h` (included after real type definitions) to keep the core header self-contained for unit tests.
+- Error hook: `void (*bb_handle_error)(const char*)` — null by default, set by bbruntime init to call RTEX, or by tests to a recorder. Called when `bb_handle_debug && bb_handle_error` on stale handle / type mismatch / capacity exceeded.
+- `bb_handle_debug` mirrors bbruntime's `debug` global (bbsys.h). Set by bbruntime init or directly in tests.
+- Free list: singly linked through `next_free` field of free entries, head = `free_list_head`. Capacity check: index > 0xFFFFF → error hook.
+- Vector starts with one dummy entry at index 0 (reserved). First real allocation gets index 1.
+- bbbank pilot: BB_HANDLE wrappers on all 16 bank rtSym signatures. `bbFreeBank` takes BB_HANDLE, converts to raw pointer via `bbBank *b=h`. `bank_destroy()` wraps raw pointer in BB_HANDLE before calling bbFreeBank.
+- bbruntime_run wires `bb_handle_debug = dbg` and `bb_handle_error = handle_error_rtex` (calls RTEX). Guarded with `#ifndef _WIN32`.
+- Userlib `'*'` params (struct types): compiler emits IR_MEM to load raw pointer from variable. On macOS this loads a 4-byte handle. Needs handle lookup in codegen — deferred.
+- Windows cast fix: `BB_HANDLE(T)(x)` is invalid on _WIN32 (becomes `T*(x)`). Use implicit conversion (`return b;`) instead. RTSYM_CAST macro for rtSym function pointers: identity on _WIN32, `(void*)(f)` on non-Windows.
+- gxruntime_b3d.h macOS compatibility: guard all Windows-only includes/members with `#ifdef _WIN32`, forward-declare classes (gxAudio, gxInput, etc.) on non-Windows. No behaviour change on Windows.
+- test_bbbank links against real bbruntime_core (bbbank.cpp + bb_handle.cpp) + stubs_gxruntime.cpp. No duplicate bank code in the test.

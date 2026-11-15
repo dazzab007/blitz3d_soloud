@@ -69,15 +69,20 @@ if (BB_PORTABLE_BUILD)
 	add_library(bb_handle bb_handle.cpp bb_handle.h)
 	bb_target_options(bb_handle)
 
+	# Portable bbruntime: files that compile on macOS without Windows headers.
+	add_library(bbruntime_core bbbank.cpp bb_handle.cpp)
+	bb_target_options(bbruntime_core)
+	target_link_libraries(bbruntime_core bb_handle)
+
 	# Unit tests for the handle table (no graphics/audio dependencies).
 	add_executable(test_handle_table ../tests/test_handle_table.cpp)
 	bb_target_options(test_handle_table)
 	target_link_libraries(test_handle_table bb_handle)
 
-	# bbbank integration test (self-contained: stubs gx_runtime/debug).
-	add_executable(test_bbbank ../tests/test_bbbank.cpp)
+	# bbbank integration test: links real bbbank.cpp + stubs for gxruntime.
+	add_executable(test_bbbank ../tests/test_bbbank.cpp ../tests/stubs_gxruntime.cpp)
 	bb_target_options(test_bbbank)
-	target_link_libraries(test_bbbank bb_handle)
+	target_link_libraries(test_bbbank bbruntime_core)
 
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)

@@ -55,7 +55,7 @@ static inline void debugBank( bbBank *b,int offset ){
 BB_HANDLE(bbBank) bbCreateBank( int size ){
 	bbBank *b=d_new bbBank( size );
 	bank_set.insert( b );
-	return BB_HANDLE(bbBank)( b );
+	return b;
 }
 
 void bbFreeBank( BB_HANDLE(bbBank) h ){
@@ -170,32 +170,36 @@ bool bank_create(){
 
 bool bank_destroy(){
 	while( bank_set.size() ){
-#ifndef _WIN32
-		bbFreeBank( BB_HANDLE(bbBank)( *bank_set.begin() ) );
-#else
 		bbFreeBank( *bank_set.begin() );
-#endif
 	}
 	return true;
 }
 
+// On macOS, BB_HANDLE(T) is bbH<T> (a struct), so function pointers with
+// BB_HANDLE params can't implicitly convert to void*. Cast through reinterpret_cast.
+#ifdef _WIN32
+#define RTSYM_CAST(f) f
+#else
+#define RTSYM_CAST(f) (void*)(f)
+#endif
+
 void bank_link( void(*rtSym)(const char*,void*) ){
-	rtSym( "%CreateBank%size=0",bbCreateBank );
-	rtSym( "FreeBank%bank",bbFreeBank );
-	rtSym( "%BankSize%bank",bbBankSize );
-	rtSym( "ResizeBank%bank%size",bbResizeBank );
-	rtSym( "CopyBank%src_bank%src_offset%dest_bank%dest_offset%count",bbCopyBank );
-	rtSym( "%PeekByte%bank%offset",bbPeekByte );
-	rtSym( "%PeekShort%bank%offset",bbPeekShort );
-	rtSym( "%PeekInt%bank%offset",bbPeekInt );
-	rtSym( "#PeekFloat%bank%offset",bbPeekFloat );
-	rtSym( "PokeByte%bank%offset%value",bbPokeByte );
-	rtSym( "PokeShort%bank%offset%value",bbPokeShort );
-	rtSym( "PokeInt%bank%offset%value",bbPokeInt );
-	rtSym( "PokeFloat%bank%offset#value",bbPokeFloat );
-	rtSym( "%ReadBytes%bank%file%offset%count",bbReadBytes );
-	rtSym( "%WriteBytes%bank%file%offset%count",bbWriteBytes );
-	rtSym( "%CallDLL$dll_name$func_name%in_bank=0%out_bank=0",bbCallDLL );
+	rtSym( "%CreateBank%size=0",RTSYM_CAST(bbCreateBank) );
+	rtSym( "FreeBank%bank",RTSYM_CAST(bbFreeBank) );
+	rtSym( "%BankSize%bank",RTSYM_CAST(bbBankSize) );
+	rtSym( "ResizeBank%bank%size",RTSYM_CAST(bbResizeBank) );
+	rtSym( "CopyBank%src_bank%src_offset%dest_bank%dest_offset%count",RTSYM_CAST(bbCopyBank) );
+	rtSym( "%PeekByte%bank%offset",RTSYM_CAST(bbPeekByte) );
+	rtSym( "%PeekShort%bank%offset",RTSYM_CAST(bbPeekShort) );
+	rtSym( "%PeekInt%bank%offset",RTSYM_CAST(bbPeekInt) );
+	rtSym( "#PeekFloat%bank%offset",RTSYM_CAST(bbPeekFloat) );
+	rtSym( "PokeByte%bank%offset%value",RTSYM_CAST(bbPokeByte) );
+	rtSym( "PokeShort%bank%offset%value",RTSYM_CAST(bbPokeShort) );
+	rtSym( "PokeInt%bank%offset%value",RTSYM_CAST(bbPokeInt) );
+	rtSym( "PokeFloat%bank%offset#value",RTSYM_CAST(bbPokeFloat) );
+	rtSym( "%ReadBytes%bank%file%offset%count",RTSYM_CAST(bbReadBytes) );
+	rtSym( "%WriteBytes%bank%file%offset%count",RTSYM_CAST(bbWriteBytes) );
+	rtSym( "%CallDLL$dll_name$func_name%in_bank=0%out_bank=0",RTSYM_CAST(bbCallDLL) );
 }
 
 
