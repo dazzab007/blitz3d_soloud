@@ -10,7 +10,7 @@
   - bbbank.cpp: 16 rtSym signatures wrapped with BB_HANDLE, forget() in ~bbBank
   - bbruntime.cpp: wire bb_handle_debug + bb_handle_error (RTEX) in bbruntime_run
   - tests/test_bbbank.cpp: 28 checks, 0 failed.
-- Commit 3: fix commit 0aa7ec4 (this commit)
+- Commit 3: fix commit 0aa7ec4 (commit c8208ca)
   - Fix Windows cast bug: `BB_HANDLE(bbBank)(b)` → `return b;`, plain call in bank_destroy
   - gxruntime_b3d.h: guard all Windows-only includes/members with `#ifdef _WIN32`, forward-declare on macOS
   - tests/stubs_gxruntime.cpp: stubs for debug, gx_runtime, debugError, callDll, debugStream, BBStr
@@ -18,9 +18,22 @@
   - test_bbbank.cpp rewritten to use real bbbank functions via forward declarations
   - handle-table-plan.md: userlib `*` param note under Prompt 3
   - test_handle_table: 407 checks, 0 failed. test_bbbank: 26 checks, 0 failed.
+- Commit 4: bbstream + bbfilesystem (commit 984cdbd)
+  - bbstream.cpp: 15 rtSym signatures wrapped with BB_HANDLE(bbStream), forget() in ~bbStream
+  - bbfilesystem.cpp: OpenFile/ReadFile/WriteFile return BB_HANDLE(bbFile), CloseFile takes BB_HANDLE(bbStream),
+    ReadDir/NextFile/CloseDir use BB_HANDLE(gxDir) with wrapper-side forget
+  - bb_handle.h: RTSYM_CAST macro moved here from bbbank.cpp (identity on _WIN32, void* cast on macOS)
+  - gxdir.h: guard Windows-only includes/members with #ifdef _WIN32
+  - tests/stubs_gxruntime.cpp: add gxFileSystem/gxDir stubs for test binaries
+  - tests/test_bbstream.cpp: 30 checks (file round-trip, same-object same-handle, stale handle debug hook,
+    bank+file via WriteBytes/ReadBytes, filesystem_destroy cleanup)
+  - bbruntime_core now includes bbstream.cpp + bbfilesystem.cpp
+  - test_handle_table: 407, test_bbbank: 26, test_bbstream: 30 — all pass
 
 ## Next
-- Prompt 2 commit 4+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
+- Prompt 2 commit 5+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
+  - bbsockets deferred (needs Winsock → BSD port first)
+  - Next: bbruntime timer (commit 4 in plan), then bbgraphics, bbaudio, bbblitz3d entity family, texture/brush/surface
 
 ## Blockers for full bbruntime on macOS (not fixed in pilot)
 - gxruntime.h → other Windows headers still needed by non-bank files
@@ -30,3 +43,5 @@
 - Userlib `'*'` params: compiler/exprnode.cpp:94-100 emits IR_MEM (raw pointer load).
   On macOS this loads a 4-byte handle, not a pointer. **Needs a handle lookup** — not changed yet.
 - bbsgd.cpp (313 rtSyms) is out of scope for the handle-table work.
+- bbReadFile/bbWriteFile/bbOpenFile never free the BBStr filename argument — original leak,
+  left as-is (out of scope for the handle-table work).

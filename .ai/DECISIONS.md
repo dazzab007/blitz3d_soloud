@@ -24,3 +24,7 @@
 - Windows cast fix: `BB_HANDLE(T)(x)` is invalid on _WIN32 (becomes `T*(x)`). Use implicit conversion (`return b;`) instead. RTSYM_CAST macro for rtSym function pointers: identity on _WIN32, `(void*)(f)` on non-Windows.
 - gxruntime_b3d.h macOS compatibility: guard all Windows-only includes/members with `#ifdef _WIN32`, forward-declare classes (gxAudio, gxInput, etc.) on non-Windows. No behaviour change on Windows.
 - test_bbbank links against real bbruntime_core (bbbank.cpp + bb_handle.cpp) + stubs_gxruntime.cpp. No duplicate bank code in the test.
+- RTSYM_CAST macro moved from bbbank.cpp to bb_handle.h: identity on _WIN32, `(void*)(f)` on macOS. Shared by all rtSym link functions.
+- gxdir.h: guard Windows-only includes/members (HANDLE, WIN32_FIND_DATA) with #ifdef _WIN32. Forward-declare on macOS.
+- bbfilesystem.cpp: OpenFile/ReadFile/WriteFile return BB_HANDLE(bbFile) (family bbStream, so same int works with stream functions). CloseFile takes BB_HANDLE(bbStream). ReadDir/NextFile/CloseDir use BB_HANDLE(gxDir) with wrapper-side forget(d) in bbCloseDir.
+- test_bbstream.cpp: no struct redefinition (ODR violation). Forward-declare `struct bbBank;` only and use the real bbPokeByte/bbPeekByte to fill/compare banks — never access members through a redefined layout.

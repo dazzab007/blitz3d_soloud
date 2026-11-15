@@ -23,14 +23,11 @@
 
 // Forward declarations for the real functions (defined in bbstream.cpp / bbfilesystem.cpp).
 struct bbBank;
-struct bbBank{
-	virtual ~bbBank(); // vtable pointer (matches real definition)
-	char *data;
-	int size,capacity;
-};
 
 BB_HANDLE(bbBank) bbCreateBank(int size);
 void bbFreeBank(BB_HANDLE(bbBank) h);
+int bbPeekByte(BB_HANDLE(bbBank) h, int offset);
+void bbPokeByte(BB_HANDLE(bbBank) h, int offset, int value);
 int bbWriteBytes(BB_HANDLE(bbBank) h, BB_HANDLE(bbStream) s_h, int offset, int count);
 int bbReadBytes(BB_HANDLE(bbBank) h, BB_HANDLE(bbStream) s_h, int offset, int count);
 
@@ -171,9 +168,7 @@ static void test_bank_file_bytes() {
 
 	BB_HANDLE(bbBank) bank = bbCreateBank(16);
 	CHECK(bank.h != 0);
-	bbBank *raw = bank; // poke raw bytes in (no Peek/Poke declared here)
-	CHECK(raw != 0);
-	if (raw) for (int i = 0; i < 16; i++) raw->data[i] = (char)i;
+	for (int i = 0; i < 16; i++) bbPokeByte(bank, i, i);
 
 	// Use bbWriteBytes: bank -> file stream handle.
 	BB_HANDLE(bbFile) w = bbWriteFile(new BBStr(path));
@@ -189,14 +184,9 @@ static void test_bank_file_bytes() {
 	n = bbReadBytes(bank2, BB_HANDLE(bbStream)(r.h), 0, 16);
 	CHECK(n == 16);
 
-	// Compare byte-by-byte via g_handle_table (no PeekByte declared here).
-	bbBank *b1 = bank;
-	bbBank *b2 = bank2;
-	CHECK(b1 != 0 && b2 != 0);
+	// Compare byte-by-byte via the real bbPeekByte.
 	bool same = true;
-	if (b1 && b2) {
-		for (int i = 0; i < 16; i++) if (b1->data[i] != b2->data[i]) same = false;
-	}
+	for (int i = 0; i < 16; i++) if (bbPeekByte(bank, i) != bbPeekByte(bank2, i)) same = false;
 	CHECK(same);
 
 	bbFreeBank(bank);
