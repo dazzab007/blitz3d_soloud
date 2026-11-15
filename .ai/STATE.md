@@ -29,11 +29,24 @@
     bank+file via WriteBytes/ReadBytes, filesystem_destroy cleanup)
   - bbruntime_core now includes bbstream.cpp + bbfilesystem.cpp
   - test_handle_table: 407, test_bbbank: 26, test_bbstream: 30 — all pass
+- Commit 5: review fixes on 984cdbd (commit 55c827e)
+  - test_bbstream.cpp: removed ODR-violating struct bbBank redefinition; uses real bbPokeByte/bbPeekByte
+  - bbfilesystem.cpp: filename ownership confirmed unchanged (no delete f) — original leak noted in Notes
+  - test_handle_table: 407, test_bbbank: 26, test_bbstream: 28 — all pass
+
+- Commit 6: handle table for timers (bbtimer.cpp)
+  - bbtimer.cpp: new file with bbCreateTimer/bbWaitTimer/bbFreeTimer using BB_HANDLE(gxTimer)
+  - bbruntime.cpp: removed timer functions, added forward decls + RTSYM_CAST in link calls
+  - gxtimer.h: guarded Win32 members (HANDLE/MMRESULT/timerCallback) with #ifdef _WIN32
+  - tests/stubs_gxruntime.cpp: gxTimer constructor/destructor/wait + gxRuntime createTimer/freeTimer/idle stubs
+  - tests/test_bbtimer.cpp: 11 checks (lifecycle, same-handle, stale handle debug hook)
+  - bbruntime_core now includes bbtimer.cpp
+  - test_handle_table: 407, test_bbbank: 26, test_bbstream: 28, test_bbtimer: 11 — all pass
 
 ## Next
-- Prompt 2 commit 5+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
+- Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - Next: bbruntime timer (commit 4 in plan), then bbgraphics, bbaudio, bbblitz3d entity family, texture/brush/surface
+  - Next: bbgraphics, bbaudio, bbblitz3d entity family, texture/brush/surface
 
 ## Blockers for full bbruntime on macOS (not fixed in pilot)
 - gxruntime.h → other Windows headers still needed by non-bank files

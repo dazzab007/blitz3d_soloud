@@ -1,9 +1,12 @@
 #include "std.h"
 #include "bbsys.h"
 #include "bbruntime.h"
-#ifndef _WIN32
 #include "bb_handle.h"
-#endif
+
+// Timer functions (defined in bbtimer.cpp).
+BB_HANDLE(gxTimer) bbCreateTimer(int hertz);
+int bbWaitTimer(BB_HANDLE(gxTimer) t_h);
+void bbFreeTimer(BB_HANDLE(gxTimer) t_h);
 
 void bbEnd()
 {
@@ -81,25 +84,6 @@ void bbSetEnv(BBStr* env_var, BBStr* val)
     putenv(t.c_str());
     delete env_var;
     delete val;
-}
-
-gxTimer* bbCreateTimer(int hertz)
-{
-    gxTimer* t = gx_runtime->createTimer(hertz);
-    return t;
-}
-
-int bbWaitTimer(gxTimer* t)
-{
-    int n = t->wait();
-    if (!gx_runtime->idle())
-        RTEX(0);
-    return n;
-}
-
-void bbFreeTimer(gxTimer* t)
-{
-    gx_runtime->freeTimer(t);
 }
 
 void bbDebugLog(BBStr* t)
@@ -197,9 +181,9 @@ void bbruntime_link(void (*rtSym)(const char* sym, void* pc))
     rtSym("$GetEnv$env_var", bbGetEnv);
     rtSym("SetEnv$env_var$value", bbSetEnv);
 
-    rtSym("%CreateTimer%hertz", bbCreateTimer);
-    rtSym("%WaitTimer%timer", bbWaitTimer);
-    rtSym("FreeTimer%timer", bbFreeTimer);
+    rtSym("%CreateTimer%hertz", RTSYM_CAST(bbCreateTimer));
+    rtSym("%WaitTimer%timer", RTSYM_CAST(bbWaitTimer));
+    rtSym("FreeTimer%timer", RTSYM_CAST(bbFreeTimer));
     rtSym("DebugLog$text", bbDebugLog);
 
     rtSym("_bbDebugStmt", _bbDebugStmt);

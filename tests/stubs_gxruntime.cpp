@@ -4,6 +4,7 @@
 // Used ONLY by test targets (test_bbbank) in the portable build.
 
 #include "../gxruntime/gxruntime.h"
+#include "../gxruntime/gxtimer.h"
 #include "../gxruntime/gxfilesystem.h"
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
@@ -59,6 +60,34 @@ gxFileSystem *gxRuntime::openFileSystem(int flags) {
 	return &fs;
 }
 void gxRuntime::closeFileSystem(gxFileSystem *filesys) { (void)filesys; }
+
+// gxTimer stubs (normally in gxruntime/gxtimer.cpp, Windows-only via Win32 timers).
+// Used only by test binaries.
+static int g_stub_timer_count = 0;
+
+gxTimer::gxTimer(gxRuntime *rt, int hertz) : runtime(rt), ticks_put(0), ticks_get(0) {
+	(void)hertz;
+	++g_stub_timer_count;
+}
+gxTimer::~gxTimer() {}
+int gxTimer::wait() {
+	// Simulate one tick per call.
+	++ticks_put;
+	int n = ticks_put - ticks_get;
+	ticks_get += n;
+	return n;
+}
+
+// gxRuntime timer stubs (normally in gxruntime_b3d.cpp, Windows-only).
+gxTimer *gxRuntime::createTimer(int hertz) {
+	return new gxTimer(this, hertz);
+}
+void gxRuntime::freeTimer(gxTimer *timer) {
+	delete timer;
+}
+bool gxRuntime::idle() {
+	return true; // program should continue
+}
 
 // BBStr stubs (normally in basic.cpp).
 BBStr::BBStr() : std::string(), next(0), prev(0) {}

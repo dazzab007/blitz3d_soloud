@@ -70,7 +70,7 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(bb_handle)
 
 	# Portable bbruntime: files that compile on macOS without Windows headers.
-	add_library(bbruntime_core bbbank.cpp bbstream.cpp bbfilesystem.cpp bb_handle.cpp)
+	add_library(bbruntime_core bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bb_handle.cpp)
 	bb_target_options(bbruntime_core)
 	target_link_libraries(bbruntime_core bb_handle)
 
@@ -88,6 +88,11 @@ if (BB_PORTABLE_BUILD)
 	add_executable(test_bbbank ../tests/test_bbbank.cpp ../tests/stubs_gxruntime.cpp)
 	bb_target_options(test_bbbank)
 	target_link_libraries(test_bbbank bbruntime_core)
+
+	# Timer handle-table integration test: links real bbtimer.cpp + stubs.
+	add_executable(test_bbtimer ../tests/test_bbtimer.cpp ../tests/stubs_gxruntime.cpp)
+	bb_target_options(test_bbtimer)
+	target_link_libraries(test_bbtimer bbruntime_core)
 
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
