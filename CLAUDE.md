@@ -109,3 +109,8 @@ Use the gxscene.cpp D3D7 state as the spec. Replace loader_x's minidx9 dependenc
 - Generated: compiler/assem_x86/asm_insts.cpp — never bulk edit.
 - Windows ABI is frozen: no signature/struct layout changes on _WIN32 paths.
 - Object pointers crossing rtSym go through bbH<T>; BBStr*, arrays, Type instances stay raw pointers.
+
+## Editing discipline
+- Never rewrite a whole existing file with Write; use targeted edits. After editing, `git diff` must show only intended lines.
+- Code generator changes: show the emitted assembly before/after for one example.
+- Before a commit that touches _WIN32 paths, say so explicitly: it needs a Windows build check.
