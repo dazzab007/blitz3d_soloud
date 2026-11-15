@@ -198,7 +198,7 @@ void Codegen_x86::code( TNode *stmt ){
 
 static string fixEsp( int esp_off ){
 	char buff[32];
-	itoa3( esp_off,buff,sizeof(buff) );
+	itoa3( esp_off<0 ? -esp_off : esp_off,buff,sizeof(buff) );
 	if( esp_off<0 ) return "\tsub\tesp,"+string(buff)+"\n";
 	return "\tadd\tesp,"+string(buff)+"\n";
 }
