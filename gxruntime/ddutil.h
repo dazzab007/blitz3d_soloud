@@ -5,7 +5,7 @@
 #ifdef _WIN32
 #include <ddraw.h>
 #define _fastcall __fastcall
-typedef int bb_win32_probe;	// probe: should compile on Windows, fail otherwise
+typedef IDirectDrawSurface7 ddSurf;
 #else
 #include "gxportable.h"
 #define _fastcall

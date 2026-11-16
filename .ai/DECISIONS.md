@@ -30,3 +30,6 @@
 - test_bbstream.cpp: no struct redefinition (ODR violation). Forward-declare `struct bbBank;` only and use the real bbPokeByte/bbPeekByte to fill/compare banks — never access members through a redefined layout.
 - Graphics handles: bbImage forget is wrapper-side in bbFreeImage (bbImage class is local to bbgraphics.cpp, no ctor to touch); frame canvases forgotten in ~bbImage since ImageBuffer() hands them to BASIC. Front/back buffers forgotten at the two closeGraphics call sites (canvases die inside gxruntime).
 - test_bbgraphics links bbgraphics.cpp + stubs_gxruntime.cpp + a new tests/stubs_blitz3d.cpp (blitz3d_open/close no-ops); bbruntime_core stays lean — bbgraphics.cpp is NOT added to it (pulls in blitz3d/gxScene).
+- Windows CI: `.github/workflows/windows.yml` — windows-2022, VS 17 2022, `-A Win32`, `--config Release`. Triggered on push to macos-port.
+- BB_CORE_SRCS: shared portable source list (bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp) in bbruntime/CMakeLists.txt, used by both Windows SRCS and bbruntime_core. New portable .cpp files go here, never only one target.
+- CLAUDE.md rule: commit not done until Windows CI green. After push, `gh run watch --exit-status`; on failure `gh run view <id> --log-failed`, fix, push again.
