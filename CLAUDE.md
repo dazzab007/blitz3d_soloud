@@ -114,3 +114,8 @@ Use the gxscene.cpp D3D7 state as the spec. Replace loader_x's minidx9 dependenc
 - Never rewrite a whole existing file with Write; use targeted edits. After editing, `git diff` must show only intended lines.
 - Code generator changes: show the emitted assembly before/after for one example.
 - Before a commit that touches _WIN32 paths, say so explicitly: it needs a Windows build check.
+
+## Windows CI
+- A commit is not done until Windows CI is green: after `git push`, run `gh run watch --exit-status`;
+  on failure run `gh run view --log-failed`, fix, and push again.
+- New portable .cpp files go in `BB_CORE_SRCS` (bbruntime/CMakeLists.txt), never only one target.
