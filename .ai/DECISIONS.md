@@ -40,3 +40,4 @@
 - test_bbaudio "table empty" check asserts by_ptr.empty() + all slots base_ptr==0, not by_handle.size()==1 — forget() keeps freed slots in the vector for reuse (audio commit)
 - blitz3d/std.h include guard renamed STD_H → BLITZ3D_STD_H: it collided with bbruntime/std.h and gxruntime/std.h, so a TU including both silently skipped the second's body (bbblitz3d.cpp included bbruntime/std.h first). bbruntime/gxruntime keep STD_H; Windows behaviour unchanged (guard rename only).
 - bbblitz3d.cpp: loader_x include/instance/dispatch guarded #ifdef _WIN32 — minidx9/DXFile is Windows-only; .x loading on macOS deferred to Prompt 5 portable parser. On macOS loadEntity() returns 0 for ".x" (same as unknown extension).
+- a2: blitz3d lib compiles on macOS (babf964) — fwd decls + const void* nested-type accessors + itoa fix
