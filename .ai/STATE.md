@@ -50,26 +50,25 @@
     close sites, bbFreeFont, bbCloseMovie. Texture canvases deferred to bbblitz3d commit.
   - Commit split: (A) headers only, (B) handles + test_bbgraphics with stubs_blitz3d.cpp
 
+## Done (cont.)
+- Graphics commit A (headers): 68dbf12 + fix ea564e8 (ddSurf typedef restored on Windows). CI green.
+
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - Next: implement graphics-plan.md commit A (header guards), then commit B (handles + tests)
+  - IN PROGRESS: graphics-plan.md commit B — BB_HANDLE in bbgraphics.cpp, forget() sites,
+    stubs, tests/test_bbgraphics.cpp. Then push + Windows CI.
 
-## Windows CI investigation (BLOCKED)
-- Commit A (68dbf12 "graphics headers: compile on macOS") pushed; Windows CI fails with 568 MSVC errors.
-- All three runs (43858574692 @ 17374b3, 43860487338 @ 50dd8b5, 43860822657 @ dc32b03) fail identically.
-- Error sites match the OLD pre-commit-A ddutil.h (line 18 = buildMipMaps with `ddSurf *surf`),
-  but the remote blob at each checked-out SHA is byte-verified to be the NEW file (md5 9e14a628...).
-- gxcanvas.cpp(78,11) C2511: MSVC sees ctor param as `IDirectDrawSurface7 *` but header declares `ddSurf *`.
-  On _WIN32 these are the same type (typedef), so this is a no-op — yet MSVC reports it.
-- Probe commit dc32b03 added `typedef int bb_win32_probe;` inside #ifdef _WIN32 in ddutil.h.
-  Run 43860822657 shows ddutil.h error sites shifted by exactly 1 line (19,28 / 20,20 / 21,16 / 22,16),
-  confirming MSVC IS seeing the probe line. But gxgraphics.h errors stay at lines 33/36/37/58/59
-  which match the NEW file, not any old version.
-- Paradox: MSVC appears to see a MIX of old and new file content within the same TU.
-  No explanation found after exhaustive verification (remote blobs, tree, checkout log, CMake config).
-- RTX CHECKPOINT A: N/A (diagnostic work, no code changes to review)
-- RTX CHECKPOINT B: N/A (blocked on CI environment issue)
+## Windows CI investigation (RESOLVED)
+- Commit A (68dbf12 "graphics headers: compile on macOS") broke the Windows build.
+  Root cause: 68dbf12 removed `typedef IDirectDrawSurface7 ddSurf;` from the _WIN32 branch of
+  ddutil.h while gxcanvas.cpp/gxgraphics.cpp still declared `ddSurf *` params — MSVC errors, not a
+  runner/cache issue. The "old vs new file" paradox was a misread: error sites referenced the
+  _WIN32 branch which had lost the typedef.
+- Fix: ea564e8 restored the typedef on Windows and dropped the probe (dc32b03). CI run
+  43865694244 @ ea564e8 is GREEN.
+- Lesson recorded in DECISIONS.md: Mac compiling proves nothing about the _WIN32 branch — every
+  #ifdef _WIN32 edit needs a Windows build check (already a CLAUDE.md rule; now evidenced).
 
 ## Blockers for full bbruntime on macOS (not fixed in pilot)
 - gxruntime.h → other Windows headers still needed by non-bank files

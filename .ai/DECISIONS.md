@@ -33,3 +33,4 @@
 - Windows CI: `.github/workflows/windows.yml` — windows-2022, VS 17 2022, `-A Win32`, `--config Release`. Triggered on push to macos-port.
 - BB_CORE_SRCS: shared portable source list (bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp) in bbruntime/CMakeLists.txt, used by both Windows SRCS and bbruntime_core. New portable .cpp files go here, never only one target.
 - CLAUDE.md rule: commit not done until Windows CI green. After push, `gh run watch --exit-status`; on failure `gh run view <id> --log-failed`, fix, push again.
+- Lesson from 68dbf12/ea564e8: the CI failure was NOT a runner/cache issue — 68dbf12 removed `typedef IDirectDrawSurface7 ddSurf;` from the _WIN32 branch of ddutil.h, and ea564e8 restored it (CI green). Mac compiling proves nothing about the _WIN32 branch: any edit touching #ifdef _WIN32 code needs a Windows build check before "done".
