@@ -71,9 +71,11 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(bb_handle)
 
 	# Portable bbruntime: files that compile on macOS without Windows headers.
-	add_library(bbruntime_core ${BB_CORE_SRCS} bb_handle.cpp)
+	# bbaudio_soloud.cpp is added here (not to BB_CORE_SRCS): the full Windows
+	# build picks soloud vs FMOD conditionally, so it must not be unconditional.
+	add_library(bbruntime_core ${BB_CORE_SRCS} bb_handle.cpp bbaudio_soloud.cpp)
 	bb_target_options(bbruntime_core)
-	target_link_libraries(bbruntime_core bb_handle)
+	target_link_libraries(bbruntime_core bb_handle soloud)
 
 	# Stream + filesystem handle-table integration test.
 	add_executable(test_bbstream ../tests/test_bbstream.cpp ../tests/stubs_gxruntime.cpp)
@@ -99,6 +101,12 @@ if (BB_PORTABLE_BUILD)
 	add_executable(test_bbgraphics ../tests/test_bbgraphics.cpp ../tests/stubs_gxruntime.cpp)
 	bb_target_options(test_bbgraphics)
 	target_link_libraries(test_bbgraphics bbruntime_core)
+
+	# Audio handle-table integration test: links real bbaudio_soloud.cpp + stubs,
+	# using SoLoud's null backend so no audio device is needed.
+	add_executable(test_bbaudio ../tests/test_bbaudio.cpp ../tests/stubs_gxruntime.cpp)
+	bb_target_options(test_bbaudio)
+	target_link_libraries(test_bbaudio bbruntime_core)
 
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)

@@ -1,4 +1,6 @@
+#include "std.h"
 #include "bbaudio_soloud.h"
+#include "bb_handle_types.h"
 
 #include "soloud.h"
 #include "soloud_wav.h"
@@ -37,54 +39,63 @@ struct Sound {
 	}
 
 	~Sound() {
+#ifndef _WIN32
+		g_handle_table.forget(this);
+#endif
 		if (debug) sounds.erase(this);
 	}
 };
 
-Sound *bbLoadSound(BBStr *path) {
+BB_HANDLE(Sound) bbLoadSound(BBStr *path) {
 	if (!soloud) {
 		delete path;
-		return nullptr;
+		return BB_HANDLE(Sound)(0);
 	}
 	auto sound = new Sound();
 	auto r = sound->wav.load(path->c_str());
 	delete path;
-	if (r == SoLoud::SO_NO_ERROR) return sound;
+	if (r == SoLoud::SO_NO_ERROR) return BB_HANDLE(Sound)(sound);
 	delete sound;
-	return nullptr;
+	return BB_HANDLE(Sound)(0);
 }
 
-void bbFreeSound(Sound *sound) {
+void bbFreeSound(BB_HANDLE(Sound) sound_h) {
+	Sound *sound = sound_h;
 	if (!sound) return;
 	debugSound(sound);
 	delete sound;
 }
 
-void bbLoopSound(Sound *sound) {
+void bbLoopSound(BB_HANDLE(Sound) sound_h) {
+	Sound *sound = sound_h;
 	if (!sound) return;
 	debugSound(sound);
 	sound->wav.setLooping(true);
 }
 
-void bbSoundVolume(Sound *sound, float volume) {
+void bbSoundVolume(BB_HANDLE(Sound) sound_h, float volume) {
+	Sound *sound = sound_h;
 	if (!sound) return;
 	debugSound(sound);
 	sound->volume = volume;
 }
 
-void bbSoundPan(Sound *sound, float pan) {
+void bbSoundPan(BB_HANDLE(Sound) sound_h, float pan) {
+	Sound *sound = sound_h;
 	if (!sound) return;
 	debugSound(sound);
 	sound->pan = pan;
 }
 
-void bbSoundPitch(Sound *sound, int pitch) {
+void bbSoundPitch(BB_HANDLE(Sound) sound_h, int pitch) {
+	Sound *sound = sound_h;
 	if (!sound) return;
 	debugSound(sound);
 	sound->pitch = pitch;
 }
 
-uint32_t bbPlaySound(Sound *sound) {
+uint32_t bbPlaySound(BB_HANDLE(Sound) sound_h) {
+	Sound *sound = sound_h;
 	if (!sound) return 0;
 	debugSound(sound);
 	uint32_t chan;
@@ -208,20 +219,20 @@ bool audio_destroy() {
 }
 
 void audio_link(void(*rtSym)(const char *, void *)) {
-	rtSym("%LoadSound$filename", bbLoadSound);
-	rtSym("%Load3DSound$filename", bbLoadSound);
-	rtSym("FreeSound%sound", bbFreeSound);
-	rtSym("LoopSound%sound", bbLoopSound);
-	rtSym("SoundPitch%sound%pitch", bbSoundPitch);
-	rtSym("SoundVolume%sound#volume", bbSoundVolume);
-	rtSym("SoundPan%sound#pan", bbSoundPan);
-	rtSym("%PlaySound%sound", bbPlaySound);
-	rtSym("%PlayMusic$midifile", bbPlayMusic);
-	rtSym("StopChannel%channel", bbStopChannel);
-	rtSym("PauseChannel%channel", bbPauseChannel);
-	rtSym("ResumeChannel%channel", bbResumeChannel);
-	rtSym("ChannelPitch%channel%pitch", bbChannelPitch);
-	rtSym("ChannelVolume%channel#volume", bbChannelVolume);
-	rtSym("ChannelPan%channel#pan", bbChannelPan);
-	rtSym("%ChannelPlaying%channel", bbChannelPlaying);
+	rtSym("%LoadSound$filename", RTSYM_CAST(bbLoadSound));
+	rtSym("%Load3DSound$filename", RTSYM_CAST(bbLoadSound));
+	rtSym("FreeSound%sound", RTSYM_CAST(bbFreeSound));
+	rtSym("LoopSound%sound", RTSYM_CAST(bbLoopSound));
+	rtSym("SoundPitch%sound%pitch", RTSYM_CAST(bbSoundPitch));
+	rtSym("SoundVolume%sound#volume", RTSYM_CAST(bbSoundVolume));
+	rtSym("SoundPan%sound#pan", RTSYM_CAST(bbSoundPan));
+	rtSym("%PlaySound%sound", RTSYM_CAST(bbPlaySound));
+	rtSym("%PlayMusic$midifile", RTSYM_CAST(bbPlayMusic));
+	rtSym("StopChannel%channel", RTSYM_CAST(bbStopChannel));
+	rtSym("PauseChannel%channel", RTSYM_CAST(bbPauseChannel));
+	rtSym("ResumeChannel%channel", RTSYM_CAST(bbResumeChannel));
+	rtSym("ChannelPitch%channel%pitch", RTSYM_CAST(bbChannelPitch));
+	rtSym("ChannelVolume%channel#volume", RTSYM_CAST(bbChannelVolume));
+	rtSym("ChannelPan%channel#pan", RTSYM_CAST(bbChannelPan));
+	rtSym("%ChannelPlaying%channel", RTSYM_CAST(bbChannelPlaying));
 }

@@ -1,17 +1,22 @@
 #pragma once
 
 #include "bbsys.h"
+#include "bb_handle.h"
+#include "soloud.h"
 
 struct Sound;
 
-Sound *bbLoadSound(BBStr *path);
-Sound *bbLoad3DSound(BBStr *path);
-void bbFreeSound(Sound *sound);
-void bbLoopSound(Sound *sound);
-void bbSoundVolume(Sound *sound, float volume);
-void bbSoundPan(Sound *sound, float pan);
-void bbSoundPitch(Sound *sound, int pitch);
-uint32_t bbPlaySound(Sound *sound);
+// Exposed for testing: allows tests to init SoLoud with a specific backend (e.g. null driver).
+extern SoLoud::Soloud *soloud;
+
+BB_HANDLE(Sound) bbLoadSound(BBStr *path);
+BB_HANDLE(Sound) bbLoad3DSound(BBStr *path);
+void bbFreeSound(BB_HANDLE(Sound) sound_h);
+void bbLoopSound(BB_HANDLE(Sound) sound_h);
+void bbSoundVolume(BB_HANDLE(Sound) sound_h, float volume);
+void bbSoundPan(BB_HANDLE(Sound) sound_h, float pan);
+void bbSoundPitch(BB_HANDLE(Sound) sound_h, int pitch);
+uint32_t bbPlaySound(BB_HANDLE(Sound) sound_h);
 uint32_t bbPlayMusic(BBStr* path);
 void bbStopChannel(uint32_t channel);
 void bbPauseChannel(uint32_t channel);

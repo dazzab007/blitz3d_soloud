@@ -53,8 +53,11 @@ if (WIN32)
     )
     set(WITH_BACKENDS WITH_XAUDIO2=1 WITH_WINMM=1)
 elseif (APPLE)
-    set(SRCS ${SRCS} ${BACKEND}/coreaudio/soloud_coreaudio.cpp)
-    set(WITH_BACKENDS WITH_COREAUDIO=1)
+    set(SRCS ${SRCS}
+            ${BACKEND}/coreaudio/soloud_coreaudio.cpp
+            ${BACKEND}/null/soloud_null.cpp
+    )
+    set(WITH_BACKENDS WITH_COREAUDIO=1 WITH_NULL=1)
     set(LIBS ${LIBS} "-framework AudioToolbox" "-framework CoreAudio" "-framework CoreFoundation")
 else ()
     set(SRCS ${SRCS} ${BACKEND}/miniaudio/soloud_miniaudio.cpp)
