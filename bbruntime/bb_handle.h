@@ -31,7 +31,8 @@ template <typename T> struct handle_type_tag { static const int value; };
 
 #ifdef _WIN32
 // Windows 32-bit: handle IS the pointer. No table, no lookup, no wrapper.
-#define BB_HANDLE(T) T*
+template <typename T> using bbHPtr = T*;  // alias: makes BB_HANDLE(T)(x) valid on MSVC
+#define BB_HANDLE(T) bbHPtr<T>
 // rtSym stores function pointers as void*; plain T* signatures convert implicitly.
 #define RTSYM_CAST(f) f
 #else
