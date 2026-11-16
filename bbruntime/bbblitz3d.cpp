@@ -10,7 +10,9 @@
 #include "../blitz3d/camera.h"
 #include "../blitz3d/sprite.h"
 #include "../blitz3d/meshmodel.h"
+#ifdef _WIN32
 #include "../blitz3d/loader_x.h"
+#endif
 #include "../blitz3d/loader_3ds.h"
 #include "../blitz3d/loader_b3d.h"
 #include "../blitz3d/md2model.h"
@@ -49,7 +51,9 @@ static ObjCollision picked;
 
 extern float stats3d[10];
 
+#ifdef _WIN32
 static Loader_X loader_x;
+#endif
 static Loader_3DS loader_3ds;
 static Loader_B3D loader_b3d;
 
@@ -150,7 +154,9 @@ static Entity *loadEntity( string t,int hint ){
 	string ext=t.substr( n+1 );
 	MeshLoader *l;
 
+#ifdef _WIN32
 	if( ext=="x" ) l=&loader_x;
+#endif
 	else if( ext=="3ds" ) l=&loader_3ds;
 	else if( ext=="b3d" ) l=&loader_b3d;
 	else return 0;

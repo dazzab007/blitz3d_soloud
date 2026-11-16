@@ -66,6 +66,34 @@
     definitions for gxGraphics/gxCanvas/gxFont/gxMovie, gxGraphics dtor forgets canvases/font.
   - Mac build green; 5 suites pass (407+26+28+11+27).
 
+- Commit 8: handle table for audio (bbaudio_soloud) — commit 4ac6a0d
+  - BB_HANDLE(Sound) on all Sound* rtSym signatures, RTSYM_CAST at link sites, channels stay uint32_t
+  - ~Sound forgets handle under #ifndef _WIN32
+  - bbaudio_soloud.cpp in bbruntime_core (portable block only, not BB_CORE_SRCS); links soloud
+  - soloud: null backend + WITH_NULL=1 on APPLE only; Windows config unchanged
+  - tests/test_bbaudio.cpp: 19 checks (null driver, tiny WAV in /tmp, lifecycle, distinct handles,
+    stale-handle debug hook, table empty after cleanup). Note: "empty" = by_ptr.empty() + all slots
+    base_ptr==0; forget() keeps slots in the vector for reuse.
+  - Mac build green; 6 suites pass (407+26+28+11+27+19). Windows CI run 43954074793 GREEN.
+
+- 3D prep survey (no source edits): `.ai/blitz3d-plan.md` written
+  - Headers: all blitz3d/*.h clean; gxscene/gxmesh/gxlight already guarded in 68dbf12.
+    bbruntime/std.h <windows.h> already guarded (bbbank pilot); loader_x.cpp minidx9
+    guarded in bbblitz3d.cpp in commit (a).
+  - blitz3d/std.h and bbruntime/std.h shared include guard STD_H — fixed in (a) by
+    renaming blitz3d's to BLITZ3D_STD_H.
+  - 235 rtSyms, 170 non-index handle-typed: entity ~120 (incl. Object* returns at :1052/:1788),
+    texture 14, brush 13, surface 25 (void* sites :1056/:1793), TextureBuffer 1, EmitSound 1.
+  - Free paths: ~Entity (entity.cpp:57, children+orphans), ~Texture (:102), ~Brush (:82),
+    ~Surface (:17), CachedTexture::Rep::~Rep canvases (cachedtexture.cpp:90 + :52/:75/:87).
+  - Commits: (a) done — std.h guard + loader_x #ifdef; (a2) blitz3d CMake target
+    (loader_x.cpp excluded); (b) entity sigs + ~Entity forget; (c) tex/brush/surf + forgets;
+    (d) tests.
+
+- 3D commit (a): blitz3d/std.h guard → BLITZ3D_STD_H; bbblitz3d.cpp loader_x include,
+  static instance and dispatch line under #ifdef _WIN32. Mac build green, 6 suites pass
+  (407+26+28+11+27+19). Windows CI pending (touches _WIN32 branch — needs the check).
+
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
