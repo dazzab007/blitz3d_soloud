@@ -12,6 +12,7 @@ set(SRCS
 	bbmath.cpp
 	bbmath.h
 	bbruntime.cpp
+	bbtimer.cpp
 	bbruntime.h
 	bbsockets.cpp
 	bbsockets.h

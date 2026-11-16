@@ -28,3 +28,5 @@
 - gxdir.h: guard Windows-only includes/members (HANDLE, WIN32_FIND_DATA) with #ifdef _WIN32. Forward-declare on macOS.
 - bbfilesystem.cpp: OpenFile/ReadFile/WriteFile return BB_HANDLE(bbFile) (family bbStream, so same int works with stream functions). CloseFile takes BB_HANDLE(bbStream). ReadDir/NextFile/CloseDir use BB_HANDLE(gxDir) with wrapper-side forget(d) in bbCloseDir.
 - test_bbstream.cpp: no struct redefinition (ODR violation). Forward-declare `struct bbBank;` only and use the real bbPokeByte/bbPeekByte to fill/compare banks — never access members through a redefined layout.
+- Graphics handles: bbImage forget is wrapper-side in bbFreeImage (bbImage class is local to bbgraphics.cpp, no ctor to touch); frame canvases forgotten in ~bbImage since ImageBuffer() hands them to BASIC. Front/back buffers forgotten at the two closeGraphics call sites (canvases die inside gxruntime).
+- test_bbgraphics links bbgraphics.cpp + stubs_gxruntime.cpp + a new tests/stubs_blitz3d.cpp (blitz3d_open/close no-ops); bbruntime_core stays lean — bbgraphics.cpp is NOT added to it (pulls in blitz3d/gxScene).

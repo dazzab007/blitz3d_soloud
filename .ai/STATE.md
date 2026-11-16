@@ -43,10 +43,17 @@
   - bbruntime_core now includes bbtimer.cpp
   - test_handle_table: 407, test_bbbank: 26, test_bbstream: 28, test_bbtimer: 11 — all pass
 
+- Graphics prep survey (no source edits): `.ai/graphics-plan.md` written
+  - Header guards for gxgraphics/gxcanvas/gxfont/gxmovie/ddutil mapped with line numbers
+  - 112 rtSyms surveyed; ~40 cross the handle boundary (canvas/font/movie/image)
+  - Free paths: forget in bbFreeImage, freeGraphics, bbInput resize, graphics()/bbEndGraphics
+    close sites, bbFreeFont, bbCloseMovie. Texture canvases deferred to bbblitz3d commit.
+  - Commit split: (A) headers only, (B) handles + test_bbgraphics with stubs_blitz3d.cpp
+
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - Next: bbgraphics, bbaudio, bbblitz3d entity family, texture/brush/surface
+  - Next: implement graphics-plan.md commit A (header guards), then commit B (handles + tests)
 
 ## Blockers for full bbruntime on macOS (not fixed in pilot)
 - gxruntime.h → other Windows headers still needed by non-bank files
