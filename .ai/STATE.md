@@ -1,5 +1,16 @@
 # State — Blitz3D macOS port (macos-port branch)
 
+## Done (a2)
+- 3D commit (a2) `babf964` "3D: blitz3d library compiles on macOS; fix loader dispatch" — Windows CI green.
+  - loadEntity dangling else-if fixed (#ifdef _WIN32 if/else chain).
+  - blitz3d static lib target in portable block; loader_x.cpp excluded non-Windows.
+  - Compile fixes: gxruntime_b3d.h fwd decls (gxScene/gxMesh/gxTexture/gxCanvas); 12 TUs include full gx header;
+    texture.h/brush.h getMatrix/getRenderState -> const void* (+casts at brush.cpp/model.cpp/q3bsprep.cpp);
+    q3bsprep itoa -> snprintf %x.
+  - All Mac suites pass: 407+26+28+11+27+19.
+  - bbblitz3d.cpp -fsyntax-only report in .ai/blitz3d-plan.md under commit (b): 2 header errors +
+    198 rtSym sites, 110 unique signatures.
+
 ## Done
 - Prompt 1: stdutil + compiler compile on 64-bit macOS/Clang (commit 6211180)
 - Handle-table design v2 written to `.ai/handle-table-plan.md` with all corrections applied
