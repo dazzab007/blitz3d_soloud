@@ -10,6 +10,7 @@ class Sprite;
 class Terrain;
 class PlaneModel;
 class Q3BSPModel;
+class gxMesh;
 
 class Model : public Object{
 public:

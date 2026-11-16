@@ -156,8 +156,9 @@ static Entity *loadEntity( string t,int hint ){
 
 #ifdef _WIN32
 	if( ext=="x" ) l=&loader_x;
+	else
 #endif
-	else if( ext=="3ds" ) l=&loader_3ds;
+	if( ext=="3ds" ) l=&loader_3ds;
 	else if( ext=="b3d" ) l=&loader_b3d;
 	else return 0;
 

@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "surface.h"
+#include "../gxruntime/gxgraphics.h"
 
 extern gxGraphics *gx_graphics;
 

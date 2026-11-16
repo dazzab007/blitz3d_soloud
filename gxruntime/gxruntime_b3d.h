@@ -25,6 +25,10 @@ class gxInput;
 class gxGraphics;
 class gxFileSystem;
 class gxTimer;
+class gxScene;
+class gxMesh;
+class gxTexture;
+class gxCanvas;
 class Debugger;
 #endif
 

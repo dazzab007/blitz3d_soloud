@@ -2,6 +2,7 @@
 #include "std.h"
 #include "meshmodel.h"
 #include "meshcollider.h"
+#include "../gxruntime/gxgraphics.h"
 
 extern gxGraphics *gx_graphics;
 

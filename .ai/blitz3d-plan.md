@@ -108,10 +108,145 @@ uint32_t channel. FMOD path (Windows): unchanged — BB_HANDLE is T* on _WIN32.
   macOS comes later (Prompt 5 portable parser).
 - bbruntime/std.h `<windows.h>` was already guarded — no change.
 
-### (a2) `blitz3d library compiles on macOS` — CMake only
-- blitz3d/*.cpp get their own CMake target in the top-level BB_PORTABLE_BUILD block,
-  excluding loader_x.cpp (minidx9/DXFile). No handle changes, no signature changes.
-- Verify: `cmake --build build -k 0` zero errors; existing suites still pass.
+### (a2) `3D: blitz3d library compiles on macOS; fix loader dispatch` — see done section below
+
+
+### (a2) `3D: blitz3d library compiles on macOS; fix loader dispatch` — done
+- bbruntime/bbblitz3d.cpp loadEntity: `#ifdef _WIN32 if( ext=="x" ) ... else #endif` so the
+  `else if( ext=="3ds" )` chain still attaches on macOS (was a dangling else-if).
+- blitz3d/CMakeLists.txt: sources in BLITZ3D_SRCS; loader_x.cpp filtered out on non-Windows;
+  BB_PORTABLE_BUILD returns before Windows lib linking (static lib, not linked yet).
+- Top-level CMakeLists.txt: add_subdirectory(blitz3D) in the portable block.
+- Compile fixes (Windows paths untouched except noted):
+  - gxruntime/gxruntime_b3d.h: forward-declare gxScene/gxMesh/gxTexture/gxCanvas (non-Windows).
+  - 11 TUs include the full gx header they use members of (gxgraphics.h or gxscene.h):
+    cachedtexture, md2rep, surface, planemodel, meshmodel, world, model, terrainrep,
+    q3bsprep, sprite, loader_b3d; camera.cpp already had it.
+  - texture.h/brush.h: getMatrix()/getRenderState() return const void* (nested gxScene
+    types can't be named against an incomplete class); casts at the two call sites in
+    brush.cpp + model.cpp/q3bsprep.cpp. Windows ABI identical (pointer-sized).
+  - q3bsprep.cpp: MSVC itoa(int,char*,base) -> snprintf %x (Windows behaviour identical).
+
+#### bbblitz3d.cpp -fsyntax-only error report (for commit (b))
+Command: `clang++ -fsyntax-only -std=c++14 -I. -Wno-deprecated-declarations -Wno-unknown-pragmas bbruntime/bbblitz3d.cpp`
+
+- 2 header errors (missing forward decls in bbsys.h / bbblitz3d.cpp, or include gxruntime_b3d.h):
+  - bbruntime/bbsys.h:9 `unknown type name 'gxRuntime'`
+  - bbruntime/bbblitz3d.cpp:28 `unknown type name 'gxFileSystem'`
+- 198 rtSym sites: `cannot initialize a parameter of type 'void *' with an lvalue of type <fn>` —
+  all 113 unique signatures below; these are the handle-table wrap sites for commit (b)+(c).
+
+Unique failing rtSym signatures (113):
+  - `BBStr *(Texture *)`
+  - `Brush *(BBStr *, int, float, float)`
+  - `Brush *(float, float, float)`
+  - `Brush *(Model *)`
+  - `Brush *(Surface *)`
+  - `Entity *(BBStr *, Entity *)`
+  - `Entity *(BBStr *, float, Entity *)`
+  - `Entity *(BBStr *, int, Entity *)`
+  - `Entity *(Camera *, float, float)`
+  - `Entity *(Entity *, Entity *)`
+  - `Entity *(Entity *, float, float, float)`
+  - `Entity *(Entity *)`
+  - `Entity *(float, float, float, float, float, float, float)`
+  - `Entity *(int, Entity *)`
+  - `Entity *(int, int, Entity *)`
+  - `Entity *(MeshModel *, Entity *)`
+  - `Entity *(Object *, float)`
+  - `float ()`
+  - `float (Entity *, Entity *)`
+  - `float (Entity *, int, int)`
+  - `float (Entity *, int)`
+  - `float (float, float, float)`
+  - `float (int)`
+  - `float (MD2Model *)`
+  - `float (MeshModel *)`
+  - `float (Object *, int)`
+  - `float (Surface *, int, int)`
+  - `float (Surface *, int)`
+  - `float (Terrain *, float, float, float)`
+  - `float (Terrain *, int, int)`
+  - `gxCanvas *(Texture *, int)`
+  - `int ()`
+  - `int (Camera *, float, float, float)`
+  - `int (Entity *, Camera *)`
+  - `int (MD2Model *)`
+  - `int (MeshModel *, MeshModel *)`
+  - `int (MeshModel *)`
+  - `int (Object *, BBStr *)`
+  - `int (Object *, int)`
+  - `int (Object *, Object *)`
+  - `int (Object *)`
+  - `int (Surface *, float, float, float, float, float, float)`
+  - `int (Surface *, int, int, int)`
+  - `int (Surface *, int, int)`
+  - `int (Surface *)`
+  - `int (Terrain *)`
+  - `int (Texture *)`
+  - `Object *()`
+  - `Object *(Object *, int)`
+  - `Surface *(MeshModel *, Brush *)`
+  - `Surface *(MeshModel *, int)`
+  - `Texture *(BBStr *, int, int, int, int, int)`
+  - `Texture *(BBStr *, int)`
+  - `Texture *(Brush *, int)`
+  - `Texture *(int, int, int, int)`
+  - `uint32_t (Sound *, Object *)' (aka 'unsigned int (Sound *, Object *)')`
+  - `void ()`
+  - `void (BBStr *, float, float, float, float, float, float, float, float, float)`
+  - `void (BBStr *, int)`
+  - `void (Brush *, float, float, float)`
+  - `void (Brush *, float)`
+  - `void (Brush *, int)`
+  - `void (Brush *, Texture *, int, int)`
+  - `void (Brush *)`
+  - `void (Camera *, float, float, float)`
+  - `void (Camera *, float, float)`
+  - `void (Camera *, float)`
+  - `void (Camera *, int, int, int, int)`
+  - `void (Camera *, int, int)`
+  - `void (Camera *, int)`
+  - `void (float, float, float, Entity *, Entity *)`
+  - `void (float, float, float)`
+  - `void (float)`
+  - `void (int, int, int, int)`
+  - `void (int, int, int)`
+  - `void (int)`
+  - `void (Light *, float, float, float)`
+  - `void (Light *, float, float)`
+  - `void (Light *, float)`
+  - `void (MD2Model *, int, float, int, int, float)`
+  - `void (MeshModel *, Brush *)`
+  - `void (MeshModel *, float, float, float, float, float, float, float)`
+  - `void (MeshModel *, float, float, float, float, float, float, int)`
+  - `void (MeshModel *, float, float, float, float, float, float)`
+  - `void (MeshModel *, float, float, float)`
+  - `void (MeshModel *, MeshModel *)`
+  - `void (MeshModel *)`
+  - `void (Object *, float, float, float, float, float, float)`
+  - `void (Object *, float, float)`
+  - `void (Object *, int, int)`
+  - `void (Object *)`
+  - `void (Q3BSPModel *, float, float, float)`
+  - `void (Q3BSPModel *, int)`
+  - `void (Sprite *, float, float)`
+  - `void (Sprite *, float)`
+  - `void (Sprite *, int)`
+  - `void (Surface *, Brush *)`
+  - `void (Surface *, int, float, float, float, float)`
+  - `void (Surface *, int, float, float, float, int)`
+  - `void (Surface *, int, float, float, float)`
+  - `void (Surface *, int, int)`
+  - `void (Terrain *, int, int, float, int)`
+  - `void (Terrain *, int, int)`
+  - `void (Terrain *, int)`
+  - `void (Texture *, float, float)`
+  - `void (Texture *, float)`
+  - `void (Texture *, int)`
+  - `void (Texture *)`
+  - `void *()`
+  - `void *(Object *, int)`
 
 ### (b) `handle_table: blitz3d entity family`
 - bbblitz3d.cpp/.h: wrap ~120 entity-family signatures (params + 17 Entity* returns +

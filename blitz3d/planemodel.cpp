@@ -3,6 +3,7 @@
 #include "planemodel.h"
 #include "frustum.h"
 #include "camera.h"
+#include "../gxruntime/gxgraphics.h"
 
 static Vector vts[17][17];
 

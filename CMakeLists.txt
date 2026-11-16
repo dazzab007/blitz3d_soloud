@@ -97,6 +97,7 @@ if (BB_PORTABLE_BUILD)
 	# Portable subset. Windows-only modules (linker, debugger, IDE, gxruntime,
 	# bbruntime, launcher) are added here as each one is ported.
 	add_subdirectory(soloud)
+	add_subdirectory(blitz3D)
 	add_subdirectory(bbruntime)
 	return()
 endif ()

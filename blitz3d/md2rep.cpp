@@ -2,6 +2,7 @@
 #include "std.h"
 #include "md2rep.h"
 #include "md2norms.h"
+#include "../gxruntime/gxgraphics.h"
 
 extern gxRuntime *gx_runtime;
 extern gxGraphics *gx_graphics;

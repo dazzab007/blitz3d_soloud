@@ -2,6 +2,7 @@
 #include "std.h"
 #include "terrainrep.h"
 #include <queue>
+#include "../gxruntime/gxgraphics.h"
 
 extern gxRuntime *gx_runtime;
 extern gxGraphics *gx_graphics;

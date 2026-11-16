@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "camera.h"
+#include "../gxruntime/gxscene.h"
 
 extern gxScene *gx_scene;
 

@@ -28,7 +28,7 @@ public:
 	int getFX()const;
 	Texture getTexture( int index )const;
 
-	const gxScene::RenderState &getRenderState()const;
+	const void *getRenderState()const;
 
 	bool operator<( const Brush &b )const;
 

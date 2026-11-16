@@ -4,6 +4,8 @@
 
 #include "model.h"
 
+class gxMesh;
+
 #define MAX_SURFACE_BONES 4
 
 class Surface{

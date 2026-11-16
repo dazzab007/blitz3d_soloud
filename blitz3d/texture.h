@@ -27,7 +27,7 @@ public:
 
 	int getCanvasFlags()const;
 	gxCanvas *getCanvas( int frame )const;
-	const gxScene::Matrix *getMatrix()const;
+	const void *getMatrix()const;
 	int getBlend()const;
 	int getFlags()const;
 	CachedTexture *getCachedTexture()const;

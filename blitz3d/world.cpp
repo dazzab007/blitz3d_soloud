@@ -2,6 +2,7 @@
 #include "std.h"
 #include <queue>
 #include "world.h"
+#include "../gxruntime/gxscene.h"
 
 //0=tris compared for collision
 //1=max proj err of terrain

@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "q3bsprep.h"
+#include "../gxruntime/gxgraphics.h"
 
 /* Quake3 File format types */
 
@@ -190,8 +191,8 @@ void Q3BSPRep::createTextures(){
 	for( int k=0;k<n_texs;++k ){
 		string t=string(q3tex->name);
 		char fl[32],co[32];
-		itoa( q3tex->flags,fl,16 );
-		itoa( q3tex->contents,co,16 );
+		snprintf( fl,sizeof(fl),"%x",q3tex->flags );
+		snprintf( co,sizeof(co),"%x",q3tex->contents );
 		log( t+", flags=0x"+fl+", contents=0x"+co );
 		Texture tex( t+".tga",1 );
 		if( !tex.getCanvas(0) ){
@@ -704,7 +705,7 @@ void Q3BSPRep::render( Model *model,const RenderContext &rc ){
 	int k;
 	for( k=0;k<r_surfs.size();++k ){
 		Q3BSPSurf *s=r_surfs[k];
-		gx_scene->setRenderState( s->brush.getRenderState() );
+		gx_scene->setRenderState( *static_cast<const gxScene::RenderState*>(s->brush.getRenderState()) );
 		int j;
 		for( j=0;j<s->r_faces.size();++j ){
 			Q3BSPFace *f=s->r_faces[j];

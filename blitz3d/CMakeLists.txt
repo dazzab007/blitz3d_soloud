@@ -6,7 +6,7 @@ endif()
 
 project(blitz)
 
-add_library(blitz3d
+set(BLITZ3D_SRCS
 	animation.cpp
 	animator.cpp
 	brush.cpp
@@ -81,7 +81,19 @@ add_library(blitz3d
 	world.h
 )
 
+# Portable (non-Windows) build: no DXFile-based .x loader.
+if(NOT WIN32)
+	list(FILTER BLITZ3D_SRCS EXCLUDE REGEX "loader_x\\.cpp$")
+endif()
+
+add_library(blitz3d ${BLITZ3D_SRCS})
+
 bb_target_options(blitz3d)
+
+# Portable build: static library, not linked into anything yet. No Windows libs.
+if (BB_PORTABLE_BUILD)
+	return ()
+endif ()
 
 set(LIBS gxruntime ${CMAKE_CURRENT_SOURCE_DIR}/minidx9/lib/d3dxof.lib)
 if(NOT BB_FMOD_ENABLED)

@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "sprite.h"
+#include "../gxruntime/gxgraphics.h"
 
 extern float stats3d[];
 

@@ -6,6 +6,8 @@
 
 #include "model.h"
 
+class gxMesh;
+
 struct TerrainRep{
 public:
 	TerrainRep( int cell_shift );

@@ -3,6 +3,7 @@
 #include "brush.h"
 
 #include "../gxruntime/gxgraphics.h"
+#include "../gxruntime/gxscene.h"
 
 struct Brush::Rep{
 	union{ int ref_cnt;Rep *next; };
@@ -195,17 +196,17 @@ Texture Brush::getTexture( int index )const{
 	return rep->texs[index];
 }
 
-const gxScene::RenderState &Brush::getRenderState()const{
+const void *Brush::getRenderState()const{
 	getBlend();
 	for( int k=0;k<rep->max_tex;++k ){
 		gxScene::RenderState::TexState *ts=&rep->rs.tex_states[k];
-		ts->matrix=rep->texs[k].getMatrix();
+		ts->matrix=static_cast<const gxScene::Matrix*>(rep->texs[k].getMatrix());
 		ts->blend=rep->texs[k].getBlend();
 		ts->flags=rep->texs[k].getFlags();
 	}
-	return rep->rs;
+	return &rep->rs;
 }
 
 bool Brush::operator<( const Brush &t )const{
-	return memcmp( &getRenderState(),&t.getRenderState(),sizeof(gxScene::RenderState) )<0;
+	return memcmp( getRenderState(),t.getRenderState(),sizeof(gxScene::RenderState) )<0;
 }

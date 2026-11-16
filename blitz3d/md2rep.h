@@ -4,6 +4,8 @@
 
 #include "model.h"
 
+class gxMesh;
+
 class MD2Rep{
 public:
 	struct Vert{

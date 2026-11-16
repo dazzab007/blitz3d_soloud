@@ -5,6 +5,7 @@
 #include "cachedtexture.h"
 
 #include "../gxruntime/gxgraphics.h"
+#include "../gxruntime/gxscene.h"
 
 extern gxScene *gx_scene;
 extern gxGraphics *gx_graphics;
@@ -166,7 +167,7 @@ int Texture::getFlags()const{
 	return rep ? rep->tex_flags : 0;
 }
 
-const gxScene::Matrix *Texture::getMatrix()const{
+const void *Texture::getMatrix()const{
 	if( !rep || !rep->mat_used ) return 0;
 	if( !rep->mat_valid ){
 		float c=cos(rep->rot),s=sin(rep->rot);

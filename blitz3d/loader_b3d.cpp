@@ -4,6 +4,7 @@
 #include "meshmodel.h"
 #include "pivot.h"
 #include "meshutil.h"
+#include "../gxruntime/gxscene.h"
 
 //#define SHOW_BONES
 
