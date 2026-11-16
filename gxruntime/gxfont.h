@@ -2,12 +2,10 @@
 #ifndef GXFONT_H
 #define GXFONT_H
 
-#include <ddraw.h>
+#include <string>
 
 class gxCanvas;
 class gxGraphics;
-
-typedef IDirectDrawSurface7 ddSurf;
 
 class gxFont{
 public:

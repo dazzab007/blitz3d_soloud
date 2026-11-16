@@ -3,7 +3,12 @@
 #define GXSCENE_H
 
 #include <map>
+#include <set>
+#include <vector>
+
+#ifdef _WIN32
 #include <d3d.h>
+#endif
 
 #include "gxlight.h"
 
@@ -17,7 +22,9 @@ class gxTexture;
 class gxScene{
 public:
 	gxGraphics *graphics;
+#ifdef _WIN32
 	IDirect3DDevice7 *dir3dDev;
+#endif
 
 	gxScene( gxGraphics *graphics,gxCanvas *target );
 	~gxScene();
@@ -117,18 +124,24 @@ private:
 	unsigned ambient,ambient2,fogcolor;
 	int caps_level,fogmode,zmode;
 	float fogrange_nr,fogrange_fr;
+#ifdef _WIN32
 	D3DVIEWPORT7 viewport;
+#endif
 	bool ortho_proj;
 	float frustum_nr,frustum_fr,frustum_w,frustum_h;
+#ifdef _WIN32
 	D3DMATRIX projmatrix,viewmatrix,worldmatrix;
 	D3DMATRIX inv_viewmatrix;
 	D3DMATERIAL7 material;
+#endif
 	float shininess;
 	int blend,fx;
 	struct TexState{
 		gxCanvas *canvas;
 		int blend,flags;
+#ifdef _WIN32
 		D3DMATRIX matrix;
+#endif
 		bool mat_valid;
 	};
 	TexState texstate[MAX_TEXTURES];
@@ -137,8 +150,10 @@ private:
 	std::set<gxLight*> _allLights;
 	std::vector<gxLight*> _curLights;
 
+#ifdef _WIN32
 	int d3d_rs[160];
 	int d3d_tss[8][32];
+#endif
 
 	void setRS( int n,int t );
 	void setTSS( int n,int s,int t );

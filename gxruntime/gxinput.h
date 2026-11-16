@@ -2,9 +2,10 @@
 #ifndef GXINPUT_H
 #define GXINPUT_H
 
+#ifdef _WIN32
 #define DIRECTINPUT_VERSION 0x0800
-
 #include <dinput.h>
+#endif
 
 #include "gxdevice.h"
 
@@ -13,7 +14,9 @@ class gxRuntime;
 class gxInput{
 public:
 	gxRuntime *runtime;
+#ifdef _WIN32
 	IDirectInput8 *dirInput;
+#endif
 
 	gxInput( gxRuntime *runtime,IDirectInput8 *di );
 	~gxInput();

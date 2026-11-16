@@ -2,10 +2,16 @@
 #ifndef DDUTIL_H
 #define DDUTIL_H
 
+#ifdef _WIN32
 #include <ddraw.h>
+#define _fastcall __fastcall
+#else
+#include "gxportable.h"
+#define _fastcall
+#endif
+#include <string>
 
 class gxGraphics;
-typedef IDirectDrawSurface7 ddSurf;
 
 struct ddUtil{
 
@@ -30,13 +36,17 @@ public:
 	PixelFormat():plot_code(0){
 	}
 
+#ifdef _WIN32
 	PixelFormat( const DDPIXELFORMAT &pf ):plot_code(0){
 		setFormat( pf );
 	}
+#endif
 
 	~PixelFormat();
 
+#ifdef _WIN32
 	void setFormat( const DDPIXELFORMAT &pf );
+#endif
 
 	int getDepth()const{
 		return depth; 

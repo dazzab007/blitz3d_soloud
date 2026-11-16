@@ -4,7 +4,10 @@
 
 #include <set>
 #include <string>
+
+#ifdef _WIN32
 #include <d3d.h>
+#endif
 
 #include "ddutil.h"
 
@@ -18,6 +21,7 @@ class gxRuntime;
 
 class gxGraphics{
 public:
+#ifdef _WIN32
 	IDirectDraw7 *dirDraw;
 	IDirectDraw *ds_dirDraw;
 
@@ -27,8 +31,13 @@ public:
 	DDPIXELFORMAT primFmt,zbuffFmt;
 
 	DDPIXELFORMAT texRGBFmt[2],texAlphaFmt[2],texRGBAlphaFmt[2],texRGBMaskFmt[2];
+#endif
 
-	gxGraphics( gxRuntime *runtime,IDirectDraw7 *dirDraw,IDirectDrawSurface7 *front,IDirectDrawSurface7 *back,bool d3d );
+#ifdef _WIN32
+	gxGraphics( gxRuntime *runtime,IDirectDraw7 *dirDraw,ddSurf *front,ddSurf *back,bool d3d );
+#else
+	gxGraphics( gxRuntime *runtime,ddSurf *front,ddSurf *back,bool d3d );
+#endif
 	~gxGraphics();
 
 	void backup();
@@ -43,7 +52,9 @@ private:
 	bool gfx_lost;
 	gxMesh *dummy_mesh;
 
+#ifdef _WIN32
 	DDSURFACEDESC2 initDesc( int w,int h,int flags );
+#endif
 	ddSurf *createSurface( int width,int height,int flags );
 	ddSurf *loadSurface( const std::string &f,int flags );
 
@@ -54,8 +65,10 @@ private:
 	std::set<gxMovie*> movie_set;
 	std::set<std::string> font_res;
 
+#ifdef _WIN32
 	DDGAMMARAMP _gammaRamp;
 	IDirectDrawGammaControl *_gamma;
+#endif
 
 	/***** GX INTERFACE *****/
 public:

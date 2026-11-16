@@ -2,14 +2,22 @@
 #ifndef GXMESH_H
 #define GXMESH_H
 
+#include <cstring>
+
+#ifdef _WIN32
 #include <d3d.h>
+#endif
 
 class gxGraphics;
 
 class gxMesh{
 public:
 
+#ifdef _WIN32
 	gxMesh( gxGraphics *graphics,IDirect3DVertexBuffer7 *verts,WORD *indicies,int max_verts,int max_tris );
+#else
+	gxMesh( gxGraphics *graphics,void *verts,unsigned short *indicies,int max_verts,int max_tris );
+#endif
 	~gxMesh();
 
 	int maxVerts()const{ return max_verts; }
@@ -31,8 +39,13 @@ private:
 	};
 
 	gxGraphics *graphics;
+#ifdef _WIN32
 	IDirect3DVertexBuffer7 *vertex_buff;
 	WORD *tri_indices;
+#else
+	void *vertex_buff;
+	unsigned short *tri_indices;
+#endif
 
 	int max_verts,max_tris;
 	bool mesh_dirty;
