@@ -52,13 +52,15 @@
 
 ## Done (cont.)
 - Graphics commit A (headers): 68dbf12 + fix ea564e8 (ddSurf typedef restored on Windows). CI green.
+- Graphics commit B b1 (code): b33e561 — BB_HANDLE in bbgraphics.cpp/.h, forget() sites,
+  bbgraphics.cpp in BB_CORE_SRCS, stubs extended. Mac build green, 4 suites pass
+  (407+26+28+11). Windows CI run 43912636011 GREEN.
 
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - IN PROGRESS: graphics-plan.md commit B (code-only b1): BB_HANDLE in bbgraphics.cpp/.h,
-    forget() sites, bbgraphics.cpp added to BB_CORE_SRCS, stubs extended. Mac build green,
-    all 4 test suites pass (407+26+28+11). Commit + push + Windows CI pending.
+  - graphics-plan.md commit B b2: tests/test_bbgraphics.cpp (handle round-trips through the
+    new stub canvases). Then push + Windows CI.
 
 ## Windows CI investigation (RESOLVED)
 - Commit A (68dbf12 "graphics headers: compile on macOS") broke the Windows build.
