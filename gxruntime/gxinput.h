@@ -18,7 +18,11 @@ public:
 	IDirectInput8 *dirInput;
 #endif
 
+#ifdef _WIN32
 	gxInput( gxRuntime *runtime,IDirectInput8 *di );
+#else
+	gxInput( gxRuntime *runtime );
+#endif
 	~gxInput();
 
 	void reset();

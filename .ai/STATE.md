@@ -56,8 +56,9 @@
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - IN PROGRESS: graphics-plan.md commit B — BB_HANDLE in bbgraphics.cpp, forget() sites,
-    stubs, tests/test_bbgraphics.cpp. Then push + Windows CI.
+  - IN PROGRESS: graphics-plan.md commit B (code-only b1): BB_HANDLE in bbgraphics.cpp/.h,
+    forget() sites, bbgraphics.cpp added to BB_CORE_SRCS, stubs extended. Mac build green,
+    all 4 test suites pass (407+26+28+11). Commit + push + Windows CI pending.
 
 ## Windows CI investigation (RESOLVED)
 - Commit A (68dbf12 "graphics headers: compile on macOS") broke the Windows build.

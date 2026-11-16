@@ -6,9 +6,12 @@
 #include "../gxruntime/gxruntime.h"
 #include "../gxruntime/gxtimer.h"
 #include "../gxruntime/gxfilesystem.h"
+#include "../gxruntime/gxgraphics.h"
+#include "../gxruntime/gxinput.h"
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
 #include "../bbruntime/bbstream.h"
+#include <set>
 #include <string>
 
 // The global debug flag (normally defined in bbruntime.cpp).
@@ -106,3 +109,220 @@ void *BBStr::operator new(size_t size) {
 void BBStr::operator delete(void *q) {
 	::operator delete(q);
 }
+
+// ==========================================================================
+// Graphics stubs (normally in gxruntime/gxgraphics.cpp etc., Windows-only).
+// Needed only so bbgraphics.cpp links into the test binaries. The stub
+// canvases keep a real CPU pixel store so future graphics tests can
+// round-trip pixels through Lock/WritePixel/CopyRect.
+
+// blitz3d.cpp globals referenced by bbgraphics.cpp (defined in bbblitz3d.cpp
+// on Windows; not linked in the portable build).
+void blitz3d_open() {}
+void blitz3d_close() {}
+
+// bbinput.cpp globals referenced by bbInput() (bbinput.cpp is Windows-only).
+gxInput *gx_input = 0;
+gxDevice *gx_mouse = 0;
+gxDevice *gx_keyboard = 0;
+std::vector<gxDevice*> gx_joysticks;
+
+// Base ctor/dtor definitions (normally in gxruntime/gxcanvas.cpp etc.,
+// Windows-only). Member initializers are zeroed; the stubs below never
+// touch the native-surface members.
+
+// PixelFormat::~PixelFormat (normally in gxruntime/ddutil.cpp, which uses
+// VirtualFree and is not compiled on macOS). Stub canvases never call
+// setFormat, so plot_code stays null.
+PixelFormat::~PixelFormat() {}
+gxCanvas::gxCanvas(gxGraphics *graphics, ddSurf *surface, int flags)
+	: graphics(graphics), main_surf(surface), surf(0), z_surf(0), flags(flags), cube_mode(0),
+	  mod_cnt(0), t_surf(0), locked_pitch(0), locked_cnt(0), lock_mod_cnt(0), remip_cnt(0),
+	  locked_surf(0), cm_pitch(0), cm_mask(0), font(0), origin_x(0), origin_y(0),
+	  handle_x(0), handle_y(0), color_argb(0xffffffff), clsColor_surf(0) {
+	for (int i = 0; i < 6; ++i) cube_surfs[i] = 0;
+}
+gxCanvas::~gxCanvas() {}
+
+gxGraphics::gxGraphics(gxRuntime *runtime, ddSurf *front, ddSurf *back, bool d3d)
+	: runtime(runtime), front_canvas(0), back_canvas(0), def_font(0), gfx_lost(false), dummy_mesh(0) {
+	(void)front; (void)back; (void)d3d;
+}
+gxGraphics::~gxGraphics() {}
+
+gxFont::gxFont(gxGraphics *graphics, gxCanvas *canvas, int width, int height,
+	int begin_char, int end_char, int def_char, int *offs, int *widths)
+	: graphics(graphics), canvas(canvas), t_canvas(0), width(width), height(height),
+	  begin_char(begin_char), end_char(end_char), def_char(def_char), offs(offs), widths(widths) {}
+gxFont::~gxFont() {}
+
+gxMovie::gxMovie(gxGraphics *gfx) : playing(false), gfx(gfx), canvas(0) {
+	src_rect.left = src_rect.top = src_rect.right = src_rect.bottom = 0;
+}
+gxMovie::~gxMovie() {}
+
+// ---- gxCanvas stub: real CPU pixel store, ARGB packed in unsigned ----
+// gxCanvas has no virtual destructor, so the registry below is used to
+// recover the StubCanvas from a base pointer instead of dynamic_cast.
+class StubCanvas;
+static std::set<gxCanvas*> g_stub_canvases;
+
+class StubCanvas : public gxCanvas {
+	unsigned int *pixels;
+	int w, h;
+public:
+	StubCanvas(int width, int height)
+		: gxCanvas(0, 0, 0), pixels(new unsigned int[width * height]()), w(width), h(height) {
+		g_stub_canvases.insert(this);
+	}
+	~StubCanvas() { g_stub_canvases.erase(this); delete[] pixels; }
+
+	static StubCanvas *asStub(gxCanvas *c) {
+		return g_stub_canvases.count(c) ? (StubCanvas*)c : 0;
+	}
+
+	int getWidth()const { return w; }
+	int getHeight()const { return h; }
+	int getDepth()const { return 32; }
+
+	void setOrigin(int x, int y) { (void)x; (void)y; }
+	void setHandle(int x, int y) { (void)x; (void)y; }
+	void setViewport(int x, int y, int ww, int hh) { (void)x; (void)y; (void)ww; (void)hh; }
+	void getOrigin(int *x, int *y)const { *x = 0; *y = 0; }
+	void getHandle(int *x, int *y)const { *x = 0; *y = 0; }
+	void getViewport(int *x, int *y, int *ww, int *hh)const { *x = 0; *y = 0; *ww = w; *hh = h; }
+
+	unsigned getMask()const { return 0; }
+	void setMask(unsigned argb) { (void)argb; }
+	unsigned getColor()const { return 0xffffffff; }
+	void setColor(unsigned argb) { (void)argb; }
+	unsigned getClsColor()const { return 0; }
+	void setClsColor(unsigned argb) { (void)argb; }
+	void setFont(gxFont *font) { (void)font; }
+
+	bool lock()const { return true; }
+	void unlock()const {}
+	void setPixel(int x, int y, unsigned argb) { if (x >= 0 && x < w && y >= 0 && y < h) pixels[y * w + x] = argb; }
+	unsigned getPixel(int x, int y)const { return (x >= 0 && x < w && y >= 0 && y < h) ? pixels[y * w + x] : 0; }
+	void copyPixel(int x, int y, gxCanvas *src, int sx, int sy) {
+		if (StubCanvas *s = asStub(src)) setPixel(x, y, s->getPixel(sx, sy));
+	}
+	void blit(int x, int y, gxCanvas *src, int sx, int sy, int sw, int sh, bool solid) {
+		if (StubCanvas *s = asStub(src)) {
+			for (int j = 0; j < sh; ++j)
+				for (int i = 0; i < sw; ++i) {
+					unsigned rgb = s->getPixel(sx + i, sy + j);
+					if (!solid && !(rgb >> 24)) continue;
+					setPixel(x + i, y + j, rgb);
+				}
+		}
+	}
+	bool collide(int x, int y, const gxCanvas *src, int sx, int sy, bool solid)const {
+		(void)x; (void)y; (void)src; (void)sx; (void)sy; (void)solid; return false;
+	}
+	bool rect_collide(int x, int y, int rx, int ry, int rw, int rh, bool solid)const {
+		(void)x; (void)y; (void)rx; (void)ry; (void)rw; (void)rh; (void)solid; return false;
+	}
+	void cls() {}
+	void plot(int x, int y) { setPixel(x, y, 0xffffffff); }
+	void line(int x, int y, int x2, int y2) { (void)x; (void)y; (void)x2; (void)y2; }
+	void rect(int x, int y, int ww, int hh, bool solid) { (void)x; (void)y; (void)ww; (void)hh; (void)solid; }
+	void oval(int x, int y, int ww, int hh, bool solid) { (void)x; (void)y; (void)ww; (void)hh; (void)solid; }
+	void text(int x, int y, const std::string &t) { (void)x; (void)y; (void)t; }
+	void backup()const {}
+};
+
+// ---- gxFont stub ----
+class StubFont : public gxFont {
+	int hgt;
+public:
+	StubFont(int height) : gxFont(0, 0, 8, height, 32, 126, 63, 0, 0), hgt(height) {}
+	int getWidth()const { return 8; }
+	int getHeight()const { return hgt; }
+	int getWidth(const std::string &text)const { return 8 * (int)text.size(); }
+	bool isPrintable(int chr)const { return chr >= 32 && chr < 127; }
+};
+
+// ---- gxMovie stub ----
+class StubMovie : public gxMovie {
+public:
+	StubMovie() : gxMovie(0) {}
+	bool draw(gxCanvas *dest, int x, int y, int w, int h) { (void)dest; (void)x; (void)y; (void)w; (void)h; return false; }
+};
+
+// ---- gxGraphics stub: real canvas/font/movie objects so the handle table
+// ---- can track them (forget() must find what was allocated). ----
+class StubGraphics : public gxGraphics {
+	gxCanvas *front, *back;
+	gxFont *def_font;
+public:
+	StubGraphics(int w, int h)
+		: gxGraphics(0, 0, 0, false), front(new StubCanvas(w, h)), back(new StubCanvas(w, h)), def_font(new StubFont(12)) {}
+	~StubGraphics() { delete front; delete back; delete def_font; }
+
+	int getWidth()const { return front->getWidth(); }
+	int getHeight()const { return front->getHeight(); }
+	int getDepth()const { return 32; }
+	int getScanLine()const { return front->getWidth() * 4; }
+	int getAvailVidmem()const { return 1024 * 1024; }
+	int getTotalVidmem()const { return 16 * 1024 * 1024; }
+
+	gxCanvas *getFrontCanvas()const { return front; }
+	gxCanvas *getBackCanvas()const { return back; }
+	gxFont *getDefaultFont()const { return def_font; }
+
+	gxCanvas *createCanvas(int width, int height, int flags) { (void)flags; return new StubCanvas(width, height); }
+	gxCanvas *loadCanvas(const std::string &file, int flags) { (void)file; (void)flags; return 0; }
+	gxCanvas *verifyCanvas(gxCanvas *canvas) { return canvas; }
+	void freeCanvas(gxCanvas *canvas) { delete canvas; }
+
+	gxFont *loadFont(const std::string &font, int height, int flags) { (void)font; (void)flags; return new StubFont(height); }
+	gxFont *verifyFont(gxFont *font) { return font; }
+	void freeFont(gxFont *font) { delete font; }
+
+	gxMovie *openMovie(const std::string &file, int flags) { (void)file; (void)flags; return new StubMovie(); }
+	gxMovie *verifyMovie(gxMovie *movie) { return movie; }
+	void closeMovie(gxMovie *movie) { delete movie; }
+
+	void vwait() {}
+	void flip(bool vwait) { (void)vwait; }
+	void setGamma(int r, int g, int b, float dr, float dg, float db) { (void)r; (void)g; (void)b; (void)dr; (void)dg; (void)db; }
+	void getGamma(int r, int g, int b, float *dr, float *dg, float *db) {
+		(void)r; (void)g; (void)b; *dr = *dg = *db = 1.0f;
+	}
+	void updateGamma(bool calibrate) { (void)calibrate; }
+};
+
+// ---- gxRuntime graphics stubs (normally in gxruntime_b3d.cpp, Windows-only) ----
+gxGraphics *gxRuntime::openGraphics(int w, int h, int d, int driver, int flags) {
+	(void)d; (void)driver; (void)flags;
+	return new StubGraphics(w, h);
+}
+void gxRuntime::closeGraphics(gxGraphics *graphics) { delete graphics; }
+bool gxRuntime::graphicsLost() { return false; }
+int gxRuntime::numGraphicsDrivers() { return 1; }
+void gxRuntime::graphicsDriverInfo(int driver, std::string *name, int *caps) {
+	(void)driver; *name = "Stub"; *caps = gxRuntime::GFXMODECAPS_3D;
+}
+int gxRuntime::numGraphicsModes(int driver) { (void)driver; return 1; }
+void gxRuntime::graphicsModeInfo(int driver, int mode, int *w, int *h, int *d, int *caps) {
+	(void)driver; (void)mode; *w = 640; *h = 480; *d = 32; *caps = gxRuntime::GFXMODECAPS_3D;
+}
+void gxRuntime::windowedModeInfo(int *caps) { *caps = gxRuntime::GFXMODECAPS_3D; }
+bool gxRuntime::delay(int ms) { (void)ms; return true; }
+int gxRuntime::getMilliSecs() { return 0; }
+void gxRuntime::setPointerVisible(bool vis) { (void)vis; }
+
+// ---- gxInput / gxDevice stubs (normally in gxruntime/gxinput.cpp, Windows-only) ----
+gxInput::gxInput(gxRuntime *rt) : runtime(rt) {}
+gxInput::~gxInput() {}
+int gxInput::toAscii(int key)const { (void)key; return 0; }
+
+gxDevice::gxDevice() {
+	for (int i = 0; i < 32; ++i) axis_states[i] = 0;
+	for (int i = 0; i < 256; ++i) hit_count[i] = 0, down_state[i] = false;
+	put = get = 0;
+}
+gxDevice::~gxDevice() {}
+int gxDevice::getKey() { return 0; }
+bool gxDevice::keyDown(int key) { (void)key; return false; }

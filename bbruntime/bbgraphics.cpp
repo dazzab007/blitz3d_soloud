@@ -2,6 +2,8 @@
 #include "std.h"
 #include "bbgraphics.h"
 #include "bbinput.h"
+#include "bb_handle.h"
+#include "bb_handle_types.h"
 
 gxGraphics *gx_graphics;
 gxCanvas *gx_canvas;
@@ -16,6 +18,9 @@ public:
 	}
 	~bbImage(){
 		for( int k=0;k<frames.size();++k ){
+#ifndef _WIN32
+			g_handle_table.forget( frames[k] );
+#endif
 			gx_graphics->freeCanvas( frames[k] );
 		}
 	}
@@ -83,13 +88,14 @@ static inline void debugMode( int n ){
 	}
 }
 
-void bbFreeImage( bbImage *i );
-
 static void freeGraphics(){
 	extern void blitz3d_close();
 	blitz3d_close();
 	while( image_set.size() ) bbFreeImage( *image_set.begin() );
 	if( p_canvas ){
+#ifndef _WIN32
+		g_handle_table.forget( p_canvas );
+#endif
 		gx_graphics->freeCanvas( p_canvas );
 		p_canvas=0;
 	}
@@ -185,6 +191,7 @@ static bool saveCanvas( gxCanvas *c,const string &f ){
 
 	int tempsize=(c->getWidth()*3+3)&~3;
 
+#ifdef _WIN32
 	BITMAPFILEHEADER bf;
 	memset( &bf,0,sizeof(bf) );
 	bf.bfType='MB';
@@ -192,6 +199,19 @@ static bool saveCanvas( gxCanvas *c,const string &f ){
 	bf.bfOffBits=sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFOHEADER);
 	BITMAPINFOHEADER bi;memset( &bi,0,sizeof(bi) );
 	bi.biSize=sizeof(bi);
+#else
+	// Same layout as the Win32 BITMAPFILEHEADER/BITMAPINFOHEADER (24-bit BMP).
+	struct BfHeader{ unsigned short bfType; unsigned bfSize; unsigned short bfReserved1,bfReserved2; unsigned bfOffBits; };
+	struct BiHeader{ unsigned biSize; long biWidth,biHeight; unsigned short biPlanes,biBitCount; unsigned biCompression,biSizeImage,biXPelsPerMeter,biYPelsPerMeter; unsigned biClrUsed,biClrImportant; };
+	BfHeader bf;
+	memset( &bf,0,sizeof(bf) );
+	bf.bfType='MB';
+	bf.bfSize=sizeof(BfHeader)+sizeof(BiHeader)+tempsize*c->getHeight();
+	bf.bfOffBits=sizeof(BfHeader)+sizeof(BiHeader);
+	BiHeader bi;memset( &bi,0,sizeof(bi) );
+	bi.biSize=sizeof(bi);
+#endif
+	bi.biWidth=c->getWidth();
 	bi.biWidth=c->getWidth();
 	bi.biHeight=c->getHeight();
 	bi.biPlanes=1;
@@ -319,7 +339,8 @@ int  bbAvailVidMem(){
 	return gx_graphics->getAvailVidmem();
 }
 
-void bbSetBuffer( gxCanvas *buff ){
+void bbSetBuffer( BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	debugCanvas( buff );
 	gx_canvas=buff;
 	curs_x=curs_y=0;
@@ -330,11 +351,12 @@ void bbSetBuffer( gxCanvas *buff ){
 	gx_canvas->setFont( curr_font );
 }
 
-gxCanvas *bbGraphicsBuffer(){
-	return gx_canvas;
+BB_HANDLE(gxCanvas) bbGraphicsBuffer(){
+	return BB_HANDLE(gxCanvas)(gx_canvas);
 }
 
-int bbLoadBuffer( gxCanvas *c,BBStr *str ){
+int bbLoadBuffer( BB_HANDLE(gxCanvas) c_h,BBStr *str ){
+	gxCanvas *c = c_h;
 	debugCanvas( c );
 	string s=*str;delete str;
 	gxCanvas *t=gx_graphics->loadCanvas( s,0 );
@@ -352,19 +374,27 @@ int bbLoadBuffer( gxCanvas *c,BBStr *str ){
 	return 1;
 }
 
-int bbSaveBuffer( gxCanvas *c,BBStr *str ){
+int bbSaveBuffer( BB_HANDLE(gxCanvas) c_h,BBStr *str ){
+	gxCanvas *c = c_h;
 	debugCanvas( c );
 	string t=*str;delete str;
 	return saveCanvas( c,t ) ? 1 : 0;
 }
 
-void bbBufferDirty( gxCanvas *c ){
+void bbBufferDirty( BB_HANDLE(gxCanvas) c_h ){
+	gxCanvas *c = c_h;
 	debugCanvas( c );
 	c->backup();
 }
 
 static void graphics( int w,int h,int d,int flags ){
 	freeGraphics();
+#ifndef _WIN32
+	if( gx_graphics ){
+		g_handle_table.forget( gx_graphics->getFrontCanvas() );
+		g_handle_table.forget( gx_graphics->getBackCanvas() );
+	}
+#endif
 	gx_runtime->closeGraphics( gx_graphics );
 	gx_graphics=gx_runtime->openGraphics( w,h,d,gx_driver,flags );
 	if( !gx_runtime->idle() ) RTEX( 0 );
@@ -411,6 +441,12 @@ void bbGraphics3D( int w,int h,int d,int mode ){
 
 void bbEndGraphics(){
 	freeGraphics();
+#ifndef _WIN32
+	if( gx_graphics ){
+		g_handle_table.forget( gx_graphics->getFrontCanvas() );
+		g_handle_table.forget( gx_graphics->getBackCanvas() );
+	}
+#endif
 	gx_runtime->closeGraphics( gx_graphics );
 	gx_graphics=gx_runtime->openGraphics( 400,300,0,0,gxGraphics::GRAPHICS_WINDOWED );
 	if( !gx_runtime->idle() ) RTEX( 0 );
@@ -460,47 +496,57 @@ float  bbGammaBlue( int n ){
 	return db;
 }
 
-gxCanvas *bbFrontBuffer(){
-	return gx_graphics->getFrontCanvas();
+BB_HANDLE(gxCanvas) bbFrontBuffer(){
+	return BB_HANDLE(gxCanvas)(gx_graphics->getFrontCanvas());
 }
 
-gxCanvas *bbBackBuffer(){
-	return gx_graphics->getBackCanvas();
+BB_HANDLE(gxCanvas) bbBackBuffer(){
+	return BB_HANDLE(gxCanvas)(gx_graphics->getBackCanvas());
 }
 
-void bbLockBuffer( gxCanvas *buff ){
+void bbLockBuffer( BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	if( buff ) debugCanvas( buff );
 	(buff ? buff : gx_canvas)->lock();
 }
 
-void bbUnlockBuffer( gxCanvas *buff ){
+void bbUnlockBuffer( BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	if( buff ) debugCanvas( buff );
 	(buff ? buff : gx_canvas)->unlock();
 }
 
-int bbReadPixel( int x,int y,gxCanvas *buff ){
+int bbReadPixel( int x,int y,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	if( buff ) debugCanvas( buff );
 	return (buff ? buff : gx_canvas)->getPixel( x,y );
 }
 
-void bbWritePixel( int x,int y,int argb,gxCanvas *buff ){
+void bbWritePixel( int x,int y,int argb,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	if( buff ) debugCanvas( buff );
 	(buff ? buff : gx_canvas)->setPixel( x,y,argb );
 }
 
-int bbReadPixelFast( int x,int y,gxCanvas *buff ){
+int bbReadPixelFast( int x,int y,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	return (buff ? buff : gx_canvas)->getPixelFast( x,y );
 }
 
-void bbWritePixelFast( int x,int y,int argb,gxCanvas *buff ){
+void bbWritePixelFast( int x,int y,int argb,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *buff = buff_h;
 	(buff ? buff : gx_canvas)->setPixelFast( x,y,argb );
 }
 
-void bbCopyPixel( int src_x,int src_y,gxCanvas *src,int dest_x,int dest_y,gxCanvas *buff ){
+void bbCopyPixel( int src_x,int src_y,BB_HANDLE(gxCanvas) src_h,int dest_x,int dest_y,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *src = src_h;
+	gxCanvas *buff = buff_h;
 	(buff ? buff : gx_canvas)->copyPixel( dest_x,dest_y,src ? src : gx_canvas,src_x,src_y );
 }
 
-void bbCopyPixelFast( int src_x,int src_y,gxCanvas *src,int dest_x,int dest_y,gxCanvas *buff ){
+void bbCopyPixelFast( int src_x,int src_y,BB_HANDLE(gxCanvas) src_h,int dest_x,int dest_y,BB_HANDLE(gxCanvas) buff_h ){
+	gxCanvas *src = src_h;
+	gxCanvas *buff = buff_h;
 	(buff ? buff : gx_canvas)->copyPixelFast( dest_x,dest_y,src ? src : gx_canvas,src_x,src_y );
 }
 
@@ -562,7 +608,8 @@ void bbClsColor( int r,int g,int b ){
 	gx_canvas->setClsColor( curr_clsColor=(r<<16)|(g<<8)|b );
 }
 
-void bbSetFont( gxFont *f ){
+void bbSetFont( BB_HANDLE(gxFont) f_h ){
+	gxFont *f = f_h;
 	debugFont( f );
 	gx_canvas->setFont( curr_font=f );
 }
@@ -594,27 +641,33 @@ void bbText( int x,int y,BBStr *str,int centre_x,int centre_y ){
 	delete str;
 }
 
-void bbCopyRect( int sx,int sy,int w,int h,int dx,int dy,gxCanvas *src,gxCanvas *dest ){
+void bbCopyRect( int sx,int sy,int w,int h,int dx,int dy,BB_HANDLE(gxCanvas) src_h,BB_HANDLE(gxCanvas) dest_h ){
+	gxCanvas *src = src_h;
 	if( src ) debugCanvas( src );
 	else src=gx_canvas;
+	gxCanvas *dest = dest_h;
 	if( dest ) debugCanvas( dest );
 	else dest=gx_canvas;
 	dest->blit( dx,dy,src,sx,sy,w,h,true );
 }
 
-gxFont *bbLoadFont( BBStr *name,int height,int bold,int italic,int underline ){
+BB_HANDLE(gxFont) bbLoadFont( BBStr *name,int height,int bold,int italic,int underline ){
 	int flags=
 		(bold ? gxFont::FONT_BOLD : 0 ) |
 		(italic ? gxFont::FONT_ITALIC : 0 ) |
 		(underline ? gxFont::FONT_UNDERLINE : 0 );
 	gxFont *font=gx_graphics->loadFont( *name,height,flags );
 	delete name;
-	return font;
+	return BB_HANDLE(gxFont)(font);
 }
 
-void bbFreeFont( gxFont *f ){
+void bbFreeFont( BB_HANDLE(gxFont) f_h ){
+	gxFont *f = f_h;
 	debugFont( f );
 	if( f==curr_font ) bbSetFont( gx_graphics->getDefaultFont() );
+#ifndef _WIN32
+	g_handle_table.forget( f );
+#endif
 	gx_graphics->freeFont( f );
 }
 
@@ -636,12 +689,13 @@ int bbStringHeight( BBStr *str ){
 	return curr_font->getHeight();
 }
 
-gxMovie *bbOpenMovie( BBStr *s ){
+BB_HANDLE(gxMovie) bbOpenMovie( BBStr *s ){
 	gxMovie *movie=gx_graphics->openMovie( *s,0 );delete s;
-	return movie;
+	return BB_HANDLE(gxMovie)(movie);
 }
 
-int bbDrawMovie( gxMovie *movie,int x,int y,int w,int h ){
+int bbDrawMovie( BB_HANDLE(gxMovie) movie_h,int x,int y,int w,int h ){
+	gxMovie *movie = movie_h;
 	if( w<0 ) w=movie->getWidth();
 	if( h<0 ) h=movie->getHeight();
 	int playing=movie->draw( gx_canvas,x,y,w,h );
@@ -649,23 +703,30 @@ int bbDrawMovie( gxMovie *movie,int x,int y,int w,int h ){
 	return playing;
 }
 
-int bbMovieWidth( gxMovie *movie ){
+int bbMovieWidth( BB_HANDLE(gxMovie) movie_h ){
+	gxMovie *movie = movie_h;
 	return movie->getWidth();
 }
 
-int bbMovieHeight( gxMovie *movie ){
+int bbMovieHeight( BB_HANDLE(gxMovie) movie_h ){
+	gxMovie *movie = movie_h;
 	return movie->getHeight();
 }
 
-int bbMoviePlaying( gxMovie *movie ){
+int bbMoviePlaying( BB_HANDLE(gxMovie) movie_h ){
+	gxMovie *movie = movie_h;
 	return movie->isPlaying();
 }
 
-void bbCloseMovie( gxMovie *movie ){
+void bbCloseMovie( BB_HANDLE(gxMovie) movie_h ){
+	gxMovie *movie = movie_h;
+#ifndef _WIN32
+	g_handle_table.forget( movie );
+#endif
 	gx_graphics->closeMovie( movie );
 }
 
-bbImage *bbLoadImage( BBStr *s ){
+BB_HANDLE(bbImage) bbLoadImage( BBStr *s ){
 	string t=*s;delete s;
 	gxCanvas *c=gx_graphics->loadCanvas( t,0 );
 	if( !c ) return 0;
@@ -675,10 +736,10 @@ bbImage *bbLoadImage( BBStr *s ){
 	frames.push_back( c );
 	bbImage *i=d_new bbImage( frames );
 	image_set.insert( i );
-	return i;
+	return BB_HANDLE(bbImage)(i);
 }
 
-bbImage *bbLoadAnimImage( BBStr *s,int w,int h,int first,int cnt ){
+BB_HANDLE(bbImage) bbLoadAnimImage( BBStr *s,int w,int h,int first,int cnt ){
 
 	string t=*s;delete s;
 
@@ -715,10 +776,11 @@ bbImage *bbLoadAnimImage( BBStr *s,int w,int h,int first,int cnt ){
 	gx_graphics->freeCanvas( pic );
 	bbImage *i=d_new bbImage( frames );
 	image_set.insert( i );
-	return i;
+	return BB_HANDLE(bbImage)(i);
 }
 
-bbImage *bbCopyImage( bbImage *i ){
+BB_HANDLE(bbImage) bbCopyImage( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	vector<gxCanvas*> frames;
 	const vector<gxCanvas*> &f=i->getFrames();
@@ -741,10 +803,10 @@ bbImage *bbCopyImage( bbImage *i ){
 	}
 	bbImage *t=d_new bbImage( frames );
 	image_set.insert( t );
-	return t;
+	return BB_HANDLE(bbImage)(t);
 }
 
-bbImage *bbCreateImage( int w,int h,int n ){
+BB_HANDLE(bbImage) bbCreateImage( int w,int h,int n ){
 	vector<gxCanvas*> frames;
 	for( int k=0;k<n;++k ){
 		gxCanvas *c=gx_graphics->createCanvas( w,h,0 );
@@ -758,10 +820,11 @@ bbImage *bbCreateImage( int w,int h,int n ){
 	}
 	bbImage *i=d_new bbImage( frames );
 	image_set.insert( i );
-	return i;
+	return BB_HANDLE(bbImage)(i);
 }
 
-void bbFreeImage( bbImage *i ){
+void bbFreeImage( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	if( !image_set.erase(i) ) return;
 	const vector<gxCanvas*> &f=i->getFrames();
 	for( int k=0;k<f.size();++k ){
@@ -773,14 +836,16 @@ void bbFreeImage( bbImage *i ){
 	delete i;
 }
 
-int bbSaveImage( bbImage *i,BBStr *str,int n ){
+int bbSaveImage( BB_HANDLE(bbImage) i_h,BBStr *str,int n ){
+	bbImage *i = i_h;
 	debugImage( i,n );
 	string t=*str;delete str;
 	gxCanvas *c=i->getFrames()[n];
 	return saveCanvas( c,t ) ? 1 : 0;
 }
 
-void bbGrabImage( bbImage *i,int x,int y,int n ){
+void bbGrabImage( BB_HANDLE(bbImage) i_h,int x,int y,int n ){
+	bbImage *i = i_h;
 	debugImage( i,n );
 	gxCanvas *c=i->getFrames()[n];
 	int src_ox,src_oy,dst_hx,dst_hy;
@@ -792,18 +857,21 @@ void bbGrabImage( bbImage *i,int x,int y,int n ){
 	if( auto_dirty ) c->backup();
 }
 
-gxCanvas *bbImageBuffer( bbImage *i,int n ){
+BB_HANDLE(gxCanvas) bbImageBuffer( BB_HANDLE(bbImage) i_h,int n ){
+	bbImage *i = i_h;
 	debugImage( i,n );
-	return i->getFrames()[n];
+	return BB_HANDLE(gxCanvas)(i->getFrames()[n]);
 }
 
-void bbDrawImage( bbImage *i,int x,int y,int frame ){
+void bbDrawImage( BB_HANDLE(bbImage) i_h,int x,int y,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	gxCanvas *c=i->getFrames()[frame];
 	gx_canvas->blit( x,y,c,0,0,c->getWidth(),c->getHeight(),false );
 }
 
-void bbDrawBlock( bbImage *i,int x,int y,int frame ){
+void bbDrawBlock( BB_HANDLE(bbImage) i_h,int x,int y,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	gxCanvas *c=i->getFrames()[frame];
 	gx_canvas->blit( x,y,c,0,0,c->getWidth(),c->getHeight(),true );
@@ -833,42 +901,49 @@ static void tile( bbImage *i,int x,int y,int frame,bool solid ){
 	}
 }
 
-void bbTileImage( bbImage *i,int x,int y,int frame ){
+void bbTileImage( BB_HANDLE(bbImage) i_h,int x,int y,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	tile( i,x,y,frame,false );
 }
 
-void bbTileBlock( bbImage *i,int x,int y,int frame ){
+void bbTileBlock( BB_HANDLE(bbImage) i_h,int x,int y,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	tile( i,x,y,frame,true );
 }
 
-void bbDrawImageRect( bbImage *i,int x,int y,int r_x,int r_y,int r_w,int r_h,int frame ){
+void bbDrawImageRect( BB_HANDLE(bbImage) i_h,int x,int y,int r_x,int r_y,int r_w,int r_h,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	gxCanvas *c=i->getFrames()[frame];
 	gx_canvas->blit( x,y,c,r_x,r_y,r_w,r_h,false );
 }
 
-void bbDrawBlockRect( bbImage *i,int x,int y,int r_x,int r_y,int r_w,int r_h,int frame ){
+void bbDrawBlockRect( BB_HANDLE(bbImage) i_h,int x,int y,int r_x,int r_y,int r_w,int r_h,int frame ){
+	bbImage *i = i_h;
 	debugImage( i,frame );
 	gxCanvas *c=i->getFrames()[frame];
 	gx_canvas->blit( x,y,c,r_x,r_y,r_w,r_h,true );
 }
 
-void bbMaskImage( bbImage *i,int r,int g,int b ){
+void bbMaskImage( BB_HANDLE(bbImage) i_h,int r,int g,int b ){
+	bbImage *i = i_h;
 	debugImage( i );
 	unsigned argb=(r<<16)|(g<<8)|b;
 	const vector<gxCanvas*> &f=i->getFrames();
 	for( int k=0;k<f.size();++k ) f[k]->setMask( argb );
 }
 
-void bbHandleImage( bbImage *i,int x,int y ){
+void bbHandleImage( BB_HANDLE(bbImage) i_h,int x,int y ){
+	bbImage *i = i_h;
 	debugImage( i );
 	const vector<gxCanvas*> &f=i->getFrames();
 	for( int k=0;k<f.size();++k ) f[k]->setHandle( x,y );
 }
 
-void bbMidHandle( bbImage *i ){
+void bbMidHandle( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	const vector<gxCanvas*> &f=i->getFrames();
 	for( int k=0;k<f.size();++k ) f[k]->setHandle( f[k]->getWidth()/2,f[k]->getHeight()/2 );
@@ -878,31 +953,37 @@ void bbAutoMidHandle( int enable ){
 	auto_midhandle=enable ? true : false;
 }
 
-int bbImageWidth( bbImage *i ){
+int bbImageWidth( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	return i->getFrames()[0]->getWidth();
 }
 
-int bbImageHeight( bbImage *i ){
+int bbImageHeight( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	return i->getFrames()[0]->getHeight();
 }
 
-int bbImageXHandle( bbImage *i ){
+int bbImageXHandle( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	int x,y;
 	i->getFrames()[0]->getHandle( &x,&y );
 	return x;
 }
 
-int bbImageYHandle( bbImage *i ){
+int bbImageYHandle( BB_HANDLE(bbImage) i_h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	int x,y;
 	i->getFrames()[0]->getHandle( &x,&y );
 	return y;
 }
 
-int bbImagesOverlap( bbImage *i1,int x1,int y1,bbImage *i2,int x2,int y2 ){
+int bbImagesOverlap( BB_HANDLE(bbImage) i1_h,int x1,int y1,BB_HANDLE(bbImage) i2_h,int x2,int y2 ){
+	bbImage *i1 = i1_h;
+	bbImage *i2 = i2_h;
 	debugImage( i1 );
 	debugImage( i2 );
 	gxCanvas *c1=i1->getFrames()[0];
@@ -910,7 +991,9 @@ int bbImagesOverlap( bbImage *i1,int x1,int y1,bbImage *i2,int x2,int y2 ){
 	return c1->collide( x1,y1,c2,x2,y2,true );
 }
 
-int bbImagesCollide( bbImage *i1,int x1,int y1,int f1,bbImage *i2,int x2,int y2,int f2 ){
+int bbImagesCollide( BB_HANDLE(bbImage) i1_h,int x1,int y1,int f1,BB_HANDLE(bbImage) i2_h,int x2,int y2,int f2 ){
+	bbImage *i1 = i1_h;
+	bbImage *i2 = i2_h;
 	debugImage( i1,f1 );
 	debugImage( i2,f2 );
 	gxCanvas *c1=i1->getFrames()[f1];
@@ -923,19 +1006,22 @@ int bbRectsOverlap( int x1,int y1,int w1,int h1,int x2,int y2,int w2,int h2 ){
 	return 1;
 }
 
-int bbImageRectOverlap( bbImage *i,int x,int y,int x2,int y2,int w2,int h2 ){
+int bbImageRectOverlap( BB_HANDLE(bbImage) i_h,int x,int y,int x2,int y2,int w2,int h2 ){
+	bbImage *i = i_h;
 	debugImage( i );
 	gxCanvas *c=i->getFrames()[0];
 	return c->rect_collide( x,y,x2,y2,w2,h2,true );
 }
 
-int bbImageRectCollide( bbImage *i,int x,int y,int f,int x2,int y2,int w2,int h2 ){
+int bbImageRectCollide( BB_HANDLE(bbImage) i_h,int x,int y,int f,int x2,int y2,int w2,int h2 ){
+	bbImage *i = i_h;
 	debugImage( i,f );
 	gxCanvas *c=i->getFrames()[f];
 	return c->rect_collide( x,y,x2,y2,w2,h2,false );
 }
 
-void bbTFormImage( bbImage *i,float a,float b,float c,float d ){
+void bbTFormImage( BB_HANDLE(bbImage) i_h,float a,float b,float c,float d ){
+	bbImage *i = i_h;
 	debugImage( i );
 	const vector<gxCanvas*> &f=i->getFrames();
 	int k;
@@ -956,21 +1042,24 @@ void bbTFormImage( bbImage *i,float a,float b,float c,float d ){
 	}
 }
 
-void bbScaleImage( bbImage *i,float w,float h ){
+void bbScaleImage( BB_HANDLE(bbImage) i_h,float w,float h ){
+	bbImage *i = i_h;
 	debugImage( i );
-	bbTFormImage( i,w,0,0,h );
+	bbTFormImage( BB_HANDLE(bbImage)(i),w,0,0,h );
 }
 
-void bbResizeImage( bbImage *i,float w,float h ){
+void bbResizeImage( BB_HANDLE(bbImage) i_h,float w,float h ){
+	bbImage *i = i_h;
 	debugImage( i );
 	gxCanvas *c=i->getFrames()[0];
-	bbTFormImage( i,w/(float)c->getWidth(),0,0,h/(float)c->getHeight() );
+	bbTFormImage( BB_HANDLE(bbImage)(i),w/(float)c->getWidth(),0,0,h/(float)c->getHeight() );
 }
 
-void bbRotateImage( bbImage *i,float d ){
+void bbRotateImage( BB_HANDLE(bbImage) i_h,float d ){
+	bbImage *i = i_h;
 	debugImage( i );
 	d*=-dtor;
-	bbTFormImage( i,cos(d),-sin(d),sin(d),cos(d) );
+	bbTFormImage( BB_HANDLE(bbImage)(i),cos(d),-sin(d),sin(d),cos(d) );
 }
 
 void bbTFormFilter( int enable ){
@@ -1040,7 +1129,12 @@ BBStr *bbInput( BBStr *prompt ){
 
 	//get temp canvas
 	if( !p_canvas || p_canvas->getWidth()<c->getWidth() || p_canvas->getHeight()<curr_font->getHeight()*2 ){
-		if( p_canvas ) gx_graphics->freeCanvas( p_canvas );
+		if( p_canvas ){
+#ifndef _WIN32
+			g_handle_table.forget( p_canvas );
+#endif
+			gx_graphics->freeCanvas( p_canvas );
+		}
 		p_canvas=gx_graphics->createCanvas( c->getWidth(),curr_font->getHeight()*2,0 );
 		if( !p_canvas ){
 			endPrinting(c);
@@ -1202,139 +1296,139 @@ bool graphics_destroy(){
 void graphics_link( void (*rtSym)( const char *sym,void *pc ) ){
 
 	//gfx driver info
-	rtSym( "%CountGfxDrivers",bbCountGfxDrivers );
-	rtSym( "$GfxDriverName%driver",bbGfxDriverName );
-	rtSym( "SetGfxDriver%driver",bbSetGfxDriver );
+	rtSym( "%CountGfxDrivers",RTSYM_CAST(bbCountGfxDrivers) );
+	rtSym( "$GfxDriverName%driver",RTSYM_CAST(bbGfxDriverName) );
+	rtSym( "SetGfxDriver%driver",RTSYM_CAST(bbSetGfxDriver) );
 
 	//gfx mode info
-	rtSym( "%CountGfxModes",bbCountGfxModes );
-	rtSym( "%GfxModeExists%width%height%depth",bbGfxModeExists );
+	rtSym( "%CountGfxModes",RTSYM_CAST(bbCountGfxModes) );
+	rtSym( "%GfxModeExists%width%height%depth",RTSYM_CAST(bbGfxModeExists) );
 
-	rtSym( "%GfxModeWidth%mode",bbGfxModeWidth );
-	rtSym( "%GfxModeHeight%mode",bbGfxModeHeight );
-	rtSym( "%GfxModeDepth%mode",bbGfxModeDepth );
-	rtSym( "%AvailVidMem",bbAvailVidMem );
-	rtSym( "%TotalVidMem",bbTotalVidMem );
+	rtSym( "%GfxModeWidth%mode",RTSYM_CAST(bbGfxModeWidth) );
+	rtSym( "%GfxModeHeight%mode",RTSYM_CAST(bbGfxModeHeight) );
+	rtSym( "%GfxModeDepth%mode",RTSYM_CAST(bbGfxModeDepth) );
+	rtSym( "%AvailVidMem",RTSYM_CAST(bbAvailVidMem) );
+	rtSym( "%TotalVidMem",RTSYM_CAST(bbTotalVidMem) );
 
-	rtSym( "%GfxDriver3D%driver",bbGfxDriver3D );
-	rtSym( "%CountGfxModes3D",bbCountGfxModes3D );
-	rtSym( "%GfxMode3DExists%width%height%depth",bbGfxMode3DExists );
-	rtSym( "%GfxMode3D%mode",bbGfxMode3D );
-	rtSym( "%Windowed3D",bbWindowed3D );
+	rtSym( "%GfxDriver3D%driver",RTSYM_CAST(bbGfxDriver3D) );
+	rtSym( "%CountGfxModes3D",RTSYM_CAST(bbCountGfxModes3D) );
+	rtSym( "%GfxMode3DExists%width%height%depth",RTSYM_CAST(bbGfxMode3DExists) );
+	rtSym( "%GfxMode3D%mode",RTSYM_CAST(bbGfxMode3D) );
+	rtSym( "%Windowed3D",RTSYM_CAST(bbWindowed3D) );
 
 	//display mode
-	rtSym( "Graphics%width%height%depth=0%mode=0",bbGraphics );
-	rtSym( "Graphics3D%width%height%depth=0%mode=0",bbGraphics3D );
-	rtSym( "EndGraphics",bbEndGraphics );
-	rtSym( "%GraphicsLost",bbGraphicsLost );
+	rtSym( "Graphics%width%height%depth=0%mode=0",RTSYM_CAST(bbGraphics) );
+	rtSym( "Graphics3D%width%height%depth=0%mode=0",RTSYM_CAST(bbGraphics3D) );
+	rtSym( "EndGraphics",RTSYM_CAST(bbEndGraphics) );
+	rtSym( "%GraphicsLost",RTSYM_CAST(bbGraphicsLost) );
 
-	rtSym( "SetGamma%src_red%src_green%src_blue#dest_red#dest_green#dest_blue",bbSetGamma );
-	rtSym( "UpdateGamma%calibrate=0",bbUpdateGamma );
-	rtSym( "#GammaRed%red",bbGammaRed );
-	rtSym( "#GammaGreen%green",bbGammaGreen );
-	rtSym( "#GammaBlue%blue",bbGammaBlue );
+	rtSym( "SetGamma%src_red%src_green%src_blue#dest_red#dest_green#dest_blue",RTSYM_CAST(bbSetGamma) );
+	rtSym( "UpdateGamma%calibrate=0",RTSYM_CAST(bbUpdateGamma) );
+	rtSym( "#GammaRed%red",RTSYM_CAST(bbGammaRed) );
+	rtSym( "#GammaGreen%green",RTSYM_CAST(bbGammaGreen) );
+	rtSym( "#GammaBlue%blue",RTSYM_CAST(bbGammaBlue) );
 
-	rtSym( "%FrontBuffer",bbFrontBuffer );
-	rtSym( "%BackBuffer",bbBackBuffer );
-	rtSym( "%ScanLine",bbScanLine );
-	rtSym( "VWait%frames=1",bbVWait );
-	rtSym( "Flip%vwait=1",bbFlip );
-	rtSym( "%GraphicsWidth",bbGraphicsWidth );
-	rtSym( "%GraphicsHeight",bbGraphicsHeight );
-	rtSym( "%GraphicsDepth",bbGraphicsDepth );
+	rtSym( "%FrontBuffer",RTSYM_CAST(bbFrontBuffer) );
+	rtSym( "%BackBuffer",RTSYM_CAST(bbBackBuffer) );
+	rtSym( "%ScanLine",RTSYM_CAST(bbScanLine) );
+	rtSym( "VWait%frames=1",RTSYM_CAST(bbVWait) );
+	rtSym( "Flip%vwait=1",RTSYM_CAST(bbFlip) );
+	rtSym( "%GraphicsWidth",RTSYM_CAST(bbGraphicsWidth) );
+	rtSym( "%GraphicsHeight",RTSYM_CAST(bbGraphicsHeight) );
+	rtSym( "%GraphicsDepth",RTSYM_CAST(bbGraphicsDepth) );
 
 	//buffer management
-	rtSym( "SetBuffer%buffer",bbSetBuffer );
-	rtSym( "%GraphicsBuffer",bbGraphicsBuffer );
-	rtSym( "%LoadBuffer%buffer$bmpfile",bbLoadBuffer );
-	rtSym( "%SaveBuffer%buffer$bmpfile",bbSaveBuffer );
-	rtSym( "BufferDirty%buffer",bbBufferDirty );
+	rtSym( "SetBuffer%buffer",RTSYM_CAST(bbSetBuffer) );
+	rtSym( "%GraphicsBuffer",RTSYM_CAST(bbGraphicsBuffer) );
+	rtSym( "%LoadBuffer%buffer$bmpfile",RTSYM_CAST(bbLoadBuffer) );
+	rtSym( "%SaveBuffer%buffer$bmpfile",RTSYM_CAST(bbSaveBuffer) );
+	rtSym( "BufferDirty%buffer",RTSYM_CAST(bbBufferDirty) );
 
 	//fast pixel reads/write
-	rtSym( "LockBuffer%buffer=0",bbLockBuffer );
-	rtSym( "UnlockBuffer%buffer=0",bbUnlockBuffer );
-	rtSym( "%ReadPixel%x%y%buffer=0",bbReadPixel );
-	rtSym( "WritePixel%x%y%argb%buffer=0",bbWritePixel );
-	rtSym( "%ReadPixelFast%x%y%buffer=0",bbReadPixelFast );
-	rtSym( "WritePixelFast%x%y%argb%buffer=0",bbWritePixelFast );
-	rtSym( "CopyPixel%src_x%src_y%src_buffer%dest_x%dest_y%dest_buffer=0",bbCopyPixel );
-	rtSym( "CopyPixelFast%src_x%src_y%src_buffer%dest_x%dest_y%dest_buffer=0",bbCopyPixelFast );
+	rtSym( "LockBuffer%buffer=0",RTSYM_CAST(bbLockBuffer) );
+	rtSym( "UnlockBuffer%buffer=0",RTSYM_CAST(bbUnlockBuffer) );
+	rtSym( "%ReadPixel%x%y%buffer=0",RTSYM_CAST(bbReadPixel) );
+	rtSym( "WritePixel%x%y%argb%buffer=0",RTSYM_CAST(bbWritePixel) );
+	rtSym( "%ReadPixelFast%x%y%buffer=0",RTSYM_CAST(bbReadPixelFast) );
+	rtSym( "WritePixelFast%x%y%argb%buffer=0",RTSYM_CAST(bbWritePixelFast) );
+	rtSym( "CopyPixel%src_x%src_y%src_buffer%dest_x%dest_y%dest_buffer=0",RTSYM_CAST(bbCopyPixel) );
+	rtSym( "CopyPixelFast%src_x%src_y%src_buffer%dest_x%dest_y%dest_buffer=0",RTSYM_CAST(bbCopyPixelFast) );
 
 	//rendering
-	rtSym( "Origin%x%y",bbOrigin );
-	rtSym( "Viewport%x%y%width%height",bbViewport );
-	rtSym( "Color%red%green%blue",bbColor );
-	rtSym( "GetColor%x%y",bbGetColor );
-	rtSym( "%ColorRed",bbColorRed );
-	rtSym( "%ColorGreen",bbColorGreen );
-	rtSym( "%ColorBlue",bbColorBlue );
-	rtSym( "ClsColor%red%green%blue",bbClsColor );
-	rtSym( "SetFont%font",bbSetFont );
-	rtSym( "Cls",bbCls );
-	rtSym( "Plot%x%y",bbPlot );
-	rtSym( "Rect%x%y%width%height%solid=1",bbRect );
-	rtSym( "Oval%x%y%width%height%solid=1",bbOval );
-	rtSym( "Line%x1%y1%x2%y2",bbLine );
-	rtSym( "Text%x%y$text%centre_x=0%centre_y=0",bbText );
-	rtSym( "CopyRect%source_x%source_y%width%height%dest_x%dest_y%src_buffer=0%dest_buffer=0",bbCopyRect );
+	rtSym( "Origin%x%y",RTSYM_CAST(bbOrigin) );
+	rtSym( "Viewport%x%y%width%height",RTSYM_CAST(bbViewport) );
+	rtSym( "Color%red%green%blue",RTSYM_CAST(bbColor) );
+	rtSym( "GetColor%x%y",RTSYM_CAST(bbGetColor) );
+	rtSym( "%ColorRed",RTSYM_CAST(bbColorRed) );
+	rtSym( "%ColorGreen",RTSYM_CAST(bbColorGreen) );
+	rtSym( "%ColorBlue",RTSYM_CAST(bbColorBlue) );
+	rtSym( "ClsColor%red%green%blue",RTSYM_CAST(bbClsColor) );
+	rtSym( "SetFont%font",RTSYM_CAST(bbSetFont) );
+	rtSym( "Cls",RTSYM_CAST(bbCls) );
+	rtSym( "Plot%x%y",RTSYM_CAST(bbPlot) );
+	rtSym( "Rect%x%y%width%height%solid=1",RTSYM_CAST(bbRect) );
+	rtSym( "Oval%x%y%width%height%solid=1",RTSYM_CAST(bbOval) );
+	rtSym( "Line%x1%y1%x2%y2",RTSYM_CAST(bbLine) );
+	rtSym( "Text%x%y$text%centre_x=0%centre_y=0",RTSYM_CAST(bbText) );
+	rtSym( "CopyRect%source_x%source_y%width%height%dest_x%dest_y%src_buffer=0%dest_buffer=0",RTSYM_CAST(bbCopyRect) );
 
 	//fonts
-	rtSym( "%LoadFont$fontname%height=12%bold=0%italic=0%underline=0",bbLoadFont );
-	rtSym( "FreeFont%font",bbFreeFont );
-	rtSym( "%FontWidth",bbFontWidth );
-	rtSym( "%FontHeight",bbFontHeight );
-	rtSym( "%StringWidth$string",bbStringWidth );
-	rtSym( "%StringHeight$string",bbStringHeight );
+	rtSym( "%LoadFont$fontname%height=12%bold=0%italic=0%underline=0",RTSYM_CAST(bbLoadFont) );
+	rtSym( "FreeFont%font",RTSYM_CAST(bbFreeFont) );
+	rtSym( "%FontWidth",RTSYM_CAST(bbFontWidth) );
+	rtSym( "%FontHeight",RTSYM_CAST(bbFontHeight) );
+	rtSym( "%StringWidth$string",RTSYM_CAST(bbStringWidth) );
+	rtSym( "%StringHeight$string",RTSYM_CAST(bbStringHeight) );
 
 	//movies
-	rtSym( "%OpenMovie$file",bbOpenMovie );
-	rtSym( "%DrawMovie%movie%x=0%y=0%w=-1%h=-1",bbDrawMovie );
-	rtSym( "%MovieWidth%movie",bbMovieWidth );
-	rtSym( "%MovieHeight%movie",bbMovieHeight );
-	rtSym( "%MoviePlaying%movie",bbMoviePlaying );
-	rtSym( "CloseMovie%movie",bbCloseMovie );
+	rtSym( "%OpenMovie$file",RTSYM_CAST(bbOpenMovie) );
+	rtSym( "%DrawMovie%movie%x=0%y=0%w=-1%h=-1",RTSYM_CAST(bbDrawMovie) );
+	rtSym( "%MovieWidth%movie",RTSYM_CAST(bbMovieWidth) );
+	rtSym( "%MovieHeight%movie",RTSYM_CAST(bbMovieHeight) );
+	rtSym( "%MoviePlaying%movie",RTSYM_CAST(bbMoviePlaying) );
+	rtSym( "CloseMovie%movie",RTSYM_CAST(bbCloseMovie) );
 
-	rtSym( "%LoadImage$bmpfile",bbLoadImage );
-	rtSym( "%LoadAnimImage$bmpfile%cellwidth%cellheight%first%count",bbLoadAnimImage );
-	rtSym( "%CopyImage%image",bbCopyImage );
-	rtSym( "%CreateImage%width%height%frames=1",bbCreateImage );
-	rtSym( "FreeImage%image",bbFreeImage );
-	rtSym( "%SaveImage%image$bmpfile%frame=0",bbSaveImage );
+	rtSym( "%LoadImage$bmpfile",RTSYM_CAST(bbLoadImage) );
+	rtSym( "%LoadAnimImage$bmpfile%cellwidth%cellheight%first%count",RTSYM_CAST(bbLoadAnimImage) );
+	rtSym( "%CopyImage%image",RTSYM_CAST(bbCopyImage) );
+	rtSym( "%CreateImage%width%height%frames=1",RTSYM_CAST(bbCreateImage) );
+	rtSym( "FreeImage%image",RTSYM_CAST(bbFreeImage) );
+	rtSym( "%SaveImage%image$bmpfile%frame=0",RTSYM_CAST(bbSaveImage) );
 
-	rtSym( "GrabImage%image%x%y%frame=0",bbGrabImage );
-	rtSym( "%ImageBuffer%image%frame=0",bbImageBuffer );
-	rtSym( "DrawImage%image%x%y%frame=0",bbDrawImage );
-	rtSym( "DrawBlock%image%x%y%frame=0",bbDrawBlock );
-	rtSym( "TileImage%image%x=0%y=0%frame=0",bbTileImage );
-	rtSym( "TileBlock%image%x=0%y=0%frame=0",bbTileBlock );
-	rtSym( "DrawImageRect%image%x%y%rect_x%rect_y%rect_width%rect_height%frame=0",bbDrawImageRect );
-	rtSym( "DrawBlockRect%image%x%y%rect_x%rect_y%rect_width%rect_height%frame=0",bbDrawBlockRect );
-	rtSym( "MaskImage%image%red%green%blue",bbMaskImage );
-	rtSym( "HandleImage%image%x%y",bbHandleImage );
-	rtSym( "MidHandle%image",bbMidHandle );
-	rtSym( "AutoMidHandle%enable",bbAutoMidHandle );
-	rtSym( "%ImageWidth%image",bbImageWidth );
-	rtSym( "%ImageHeight%image",bbImageHeight );
-	rtSym( "%ImageXHandle%image",bbImageXHandle );
-	rtSym( "%ImageYHandle%image",bbImageYHandle );
+	rtSym( "GrabImage%image%x%y%frame=0",RTSYM_CAST(bbGrabImage) );
+	rtSym( "%ImageBuffer%image%frame=0",RTSYM_CAST(bbImageBuffer) );
+	rtSym( "DrawImage%image%x%y%frame=0",RTSYM_CAST(bbDrawImage) );
+	rtSym( "DrawBlock%image%x%y%frame=0",RTSYM_CAST(bbDrawBlock) );
+	rtSym( "TileImage%image%x=0%y=0%frame=0",RTSYM_CAST(bbTileImage) );
+	rtSym( "TileBlock%image%x=0%y=0%frame=0",RTSYM_CAST(bbTileBlock) );
+	rtSym( "DrawImageRect%image%x%y%rect_x%rect_y%rect_width%rect_height%frame=0",RTSYM_CAST(bbDrawImageRect) );
+	rtSym( "DrawBlockRect%image%x%y%rect_x%rect_y%rect_width%rect_height%frame=0",RTSYM_CAST(bbDrawBlockRect) );
+	rtSym( "MaskImage%image%red%green%blue",RTSYM_CAST(bbMaskImage) );
+	rtSym( "HandleImage%image%x%y",RTSYM_CAST(bbHandleImage) );
+	rtSym( "MidHandle%image",RTSYM_CAST(bbMidHandle) );
+	rtSym( "AutoMidHandle%enable",RTSYM_CAST(bbAutoMidHandle) );
+	rtSym( "%ImageWidth%image",RTSYM_CAST(bbImageWidth) );
+	rtSym( "%ImageHeight%image",RTSYM_CAST(bbImageHeight) );
+	rtSym( "%ImageXHandle%image",RTSYM_CAST(bbImageXHandle) );
+	rtSym( "%ImageYHandle%image",RTSYM_CAST(bbImageYHandle) );
 
-	rtSym( "ScaleImage%image#xscale#yscale",bbScaleImage );
-	rtSym( "ResizeImage%image#width#height",bbResizeImage );
-	rtSym( "RotateImage%image#angle",bbRotateImage );
-	rtSym( "TFormImage%image#a#b#c#d",bbTFormImage );
-	rtSym( "TFormFilter%enable",bbTFormFilter );
+	rtSym( "ScaleImage%image#xscale#yscale",RTSYM_CAST(bbScaleImage) );
+	rtSym( "ResizeImage%image#width#height",RTSYM_CAST(bbResizeImage) );
+	rtSym( "RotateImage%image#angle",RTSYM_CAST(bbRotateImage) );
+	rtSym( "TFormImage%image#a#b#c#d",RTSYM_CAST(bbTFormImage) );
+	rtSym( "TFormFilter%enable",RTSYM_CAST(bbTFormFilter) );
 
-	rtSym( "%ImagesOverlap%image1%x1%y1%image2%x2%y2",bbImagesOverlap );
-	rtSym( "%ImagesCollide%image1%x1%y1%frame1%image2%x2%y2%frame2",bbImagesCollide );
-	rtSym( "%RectsOverlap%x1%y1%width1%height1%x2%y2%width2%height2",bbRectsOverlap );
-	rtSym( "%ImageRectOverlap%image%x%y%rect_x%rect_y%rect_width%rect_height",bbImageRectOverlap );
-	rtSym( "%ImageRectCollide%image%x%y%frame%rect_x%rect_y%rect_width%rect_height",bbImageRectCollide );
+	rtSym( "%ImagesOverlap%image1%x1%y1%image2%x2%y2",RTSYM_CAST(bbImagesOverlap) );
+	rtSym( "%ImagesCollide%image1%x1%y1%frame1%image2%x2%y2%frame2",RTSYM_CAST(bbImagesCollide) );
+	rtSym( "%RectsOverlap%x1%y1%width1%height1%x2%y2%width2%height2",RTSYM_CAST(bbRectsOverlap) );
+	rtSym( "%ImageRectOverlap%image%x%y%rect_x%rect_y%rect_width%rect_height",RTSYM_CAST(bbImageRectOverlap) );
+	rtSym( "%ImageRectCollide%image%x%y%frame%rect_x%rect_y%rect_width%rect_height",RTSYM_CAST(bbImageRectCollide) );
 
-	rtSym( "Write$string",bbWrite );
-	rtSym( "Print$string=\"\"",bbPrint );
-	rtSym( "$Input$prompt=\"\"",bbInput );
-	rtSym( "Locate%x%y",bbLocate );
+	rtSym( "Write$string",RTSYM_CAST(bbWrite) );
+	rtSym( "Print$string=\"\"",RTSYM_CAST(bbPrint) );
+	rtSym( "$Input$prompt=\"\"",RTSYM_CAST(bbInput) );
+	rtSym( "Locate%x%y",RTSYM_CAST(bbLocate) );
 
-	rtSym( "ShowPointer",bbShowPointer );
-	rtSym( "HidePointer",bbHidePointer );
+	rtSym( "ShowPointer",RTSYM_CAST(bbShowPointer) );
+	rtSym( "HidePointer",RTSYM_CAST(bbHidePointer) );
 }
