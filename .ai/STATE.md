@@ -55,12 +55,20 @@
 - Graphics commit B b1 (code): b33e561 — BB_HANDLE in bbgraphics.cpp/.h, forget() sites,
   bbgraphics.cpp in BB_CORE_SRCS, stubs extended. Mac build green, 4 suites pass
   (407+26+28+11). Windows CI run 43912636011 GREEN.
+- Graphics commit B b2: two bug fixes from b33e561 + tests/test_bbgraphics.cpp.
+  - ~bbImage now forgets the image itself (frame canvases were forgotten, image was not).
+  - saveCanvas BMP structs: uint16_t/uint32_t/int32_t + #pragma pack(2)/pack(1),
+    static_assert sizeof==14 / ==40.
+  - test_bbgraphics.cpp: 27 checks (image stale after free, ImageBuffer stable-then-stale,
+    font stale after free, EndGraphics forgets front/back, table empty after cleanup).
+  - stubs_gxruntime.cpp: gxRuntime ctor/dtor + StubGraphics populates base private members
+    (front_canvas/back_canvas/def_font made public on non-Windows), base-class method
+    definitions for gxGraphics/gxCanvas/gxFont/gxMovie, gxGraphics dtor forgets canvases/font.
+  - Mac build green; 5 suites pass (407+26+28+11+27).
 
 ## Next
 - Prompt 2 commit 7+: remaining modules per `.ai/handle-table-plan.md` §7 sequence.
   - bbsockets deferred (needs Winsock → BSD port first)
-  - graphics-plan.md commit B b2: tests/test_bbgraphics.cpp (handle round-trips through the
-    new stub canvases). Then push + Windows CI.
 
 ## Windows CI investigation (RESOLVED)
 - Commit A (68dbf12 "graphics headers: compile on macOS") broke the Windows build.

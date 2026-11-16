@@ -4,6 +4,9 @@
 #include "bbinput.h"
 #include "bb_handle.h"
 #include "bb_handle_types.h"
+#ifndef _WIN32
+#include <cstdint>
+#endif
 
 gxGraphics *gx_graphics;
 gxCanvas *gx_canvas;
@@ -17,6 +20,9 @@ public:
 	bbImage( const vector<gxCanvas*> &f ):frames(f){
 	}
 	~bbImage(){
+#ifndef _WIN32
+		g_handle_table.forget( this );
+#endif
 		for( int k=0;k<frames.size();++k ){
 #ifndef _WIN32
 			g_handle_table.forget( frames[k] );
@@ -201,8 +207,16 @@ static bool saveCanvas( gxCanvas *c,const string &f ){
 	bi.biSize=sizeof(bi);
 #else
 	// Same layout as the Win32 BITMAPFILEHEADER/BITMAPINFOHEADER (24-bit BMP).
-	struct BfHeader{ unsigned short bfType; unsigned bfSize; unsigned short bfReserved1,bfReserved2; unsigned bfOffBits; };
-	struct BiHeader{ unsigned biSize; long biWidth,biHeight; unsigned short biPlanes,biBitCount; unsigned biCompression,biSizeImage,biXPelsPerMeter,biYPelsPerMeter; unsigned biClrUsed,biClrImportant; };
+	// Fixed-width types (no long) and explicit packing so the on-disk sizes are
+	// 14 and 40 bytes regardless of platform defaults.
+#pragma pack(push,2)
+	struct BfHeader{ uint16_t bfType; uint32_t bfSize; uint16_t bfReserved1,bfReserved2; uint32_t bfOffBits; };
+#pragma pack(pop)
+	static_assert( sizeof(BfHeader)==14, "BfHeader must be 14 bytes" );
+#pragma pack(push,1)
+	struct BiHeader{ uint32_t biSize; int32_t biWidth,biHeight; uint16_t biPlanes,biBitCount; uint32_t biCompression,biSizeImage,biXPelsPerMeter,biYPelsPerMeter; uint32_t biClrUsed,biClrImportant; };
+#pragma pack(pop)
+	static_assert( sizeof(BiHeader)==40, "BiHeader must be 40 bytes" );
 	BfHeader bf;
 	memset( &bf,0,sizeof(bf) );
 	bf.bfType='MB';

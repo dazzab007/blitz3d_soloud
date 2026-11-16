@@ -95,6 +95,11 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_bbtimer)
 	target_link_libraries(test_bbtimer bbruntime_core)
 
+	# Graphics handle-table integration test: links real bbgraphics.cpp + stubs.
+	add_executable(test_bbgraphics ../tests/test_bbgraphics.cpp ../tests/stubs_gxruntime.cpp)
+	bb_target_options(test_bbgraphics)
+	target_link_libraries(test_bbgraphics bbruntime_core)
+
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
 	# which are not yet ported.

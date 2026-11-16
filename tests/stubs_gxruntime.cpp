@@ -11,6 +11,9 @@
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
 #include "../bbruntime/bbstream.h"
+#ifndef _WIN32
+#include "../bbruntime/bb_handle.h"
+#endif
 #include <set>
 #include <string>
 
@@ -18,7 +21,25 @@
 bool debug = false;
 
 // The global gx_runtime pointer (normally set in bbruntime_run).
+// The stub runtime is a real object: bbEx (bbsys.h) calls
+// gx_runtime->debugError() when RTEX throws. It leaks for the lifetime of
+// the test process (the ctor/dtor are private and closeRuntime needs the
+// full Windows runtime), so it is created once and never destroyed.
 gxRuntime *gx_runtime = 0;
+
+// Stub ctor/dtor (normally in gxruntime/gxruntime_b3d.cpp, Windows-only).
+// The dtor is private, so the object leaks for the lifetime of the test process.
+gxRuntime::gxRuntime() {
+	input = 0; graphics = 0; fileSystem = 0;
+	enum_all = false; drivers.clear(); curr_driver = 0; use_di = 0;
+	pointer_visible = true; app_close = "";
+}
+gxRuntime::~gxRuntime() {}
+
+// Test helper: create the stub runtime (no-op if already created).
+void stub_init_runtime() {
+	if (!gx_runtime) gx_runtime = new gxRuntime();
+}
 
 // Stub implementation of gxRuntime methods that bbbank.cpp calls.
 // These are only linked into test binaries, never into the real runtime.
@@ -127,6 +148,7 @@ gxDevice *gx_mouse = 0;
 gxDevice *gx_keyboard = 0;
 std::vector<gxDevice*> gx_joysticks;
 
+
 // Base ctor/dtor definitions (normally in gxruntime/gxcanvas.cpp etc.,
 // Windows-only). Member initializers are zeroed; the stubs below never
 // touch the native-surface members.
@@ -148,7 +170,14 @@ gxGraphics::gxGraphics(gxRuntime *runtime, ddSurf *front, ddSurf *back, bool d3d
 	: runtime(runtime), front_canvas(0), back_canvas(0), def_font(0), gfx_lost(false), dummy_mesh(0) {
 	(void)front; (void)back; (void)d3d;
 }
-gxGraphics::~gxGraphics() {}
+gxGraphics::~gxGraphics() {
+#ifndef _WIN32
+	// Forget the canvases and default font (the real dtor is Windows-only).
+	g_handle_table.forget( front_canvas );
+	g_handle_table.forget( back_canvas );
+	g_handle_table.forget( def_font );
+#endif
+}
 
 gxFont::gxFont(gxGraphics *graphics, gxCanvas *canvas, int width, int height,
 	int begin_char, int end_char, int def_char, int *offs, int *widths)
@@ -257,7 +286,13 @@ class StubGraphics : public gxGraphics {
 	gxFont *def_font;
 public:
 	StubGraphics(int w, int h)
-		: gxGraphics(0, 0, 0, false), front(new StubCanvas(w, h)), back(new StubCanvas(w, h)), def_font(new StubFont(12)) {}
+		: gxGraphics(0, 0, 0, false), front(new StubCanvas(w, h)), back(new StubCanvas(w, h)), def_font(new StubFont(12)) {
+			// Populate the PRIVATE base members: the base accessors (which
+			// bbgraphics.cpp calls through a gxGraphics*) read these.
+			front_canvas = front;
+			back_canvas = back;
+			gxGraphics::def_font = def_font;
+		}
 	~StubGraphics() { delete front; delete back; delete def_font; }
 
 	int getWidth()const { return front->getWidth(); }
@@ -292,6 +327,93 @@ public:
 	}
 	void updateGamma(bool calibrate) { (void)calibrate; }
 };
+
+// ---- Base-class method definitions for the non-Windows build ----
+// The gx* classes have no vtable, so calls through a base pointer bind to
+// the base methods at compile time. bbgraphics.cpp calls through
+// gxGraphics*/gxCanvas*/gxFont*/gxMovie*, so the base definitions are what
+// the test binaries need. (The Stub* definitions above are only reachable
+// through Stub* pointers; they exist for future pixel-level tests.)
+
+int gxGraphics::getWidth()const { return front_canvas->getWidth(); }
+int gxGraphics::getHeight()const { return front_canvas->getHeight(); }
+int gxGraphics::getDepth()const { return front_canvas->getDepth(); }
+int gxGraphics::getScanLine()const { return front_canvas->getWidth() * 4; }
+int gxGraphics::getAvailVidmem()const { return 1024 * 1024; }
+int gxGraphics::getTotalVidmem()const { return 16 * 1024 * 1024; }
+gxCanvas *gxGraphics::getFrontCanvas()const { return front_canvas; }
+gxCanvas *gxGraphics::getBackCanvas()const { return back_canvas; }
+gxFont *gxGraphics::getDefaultFont()const { return def_font; }
+
+gxCanvas *gxGraphics::createCanvas(int width, int height, int flags) { (void)flags; return new StubCanvas(width, height); }
+gxCanvas *gxGraphics::loadCanvas(const std::string &file, int flags) { (void)file; (void)flags; return 0; }
+gxCanvas *gxGraphics::verifyCanvas(gxCanvas *canvas) { return canvas; }
+void gxGraphics::freeCanvas(gxCanvas *canvas) { delete canvas; }
+
+gxFont *gxGraphics::loadFont(const std::string &font, int height, int flags) { (void)font; (void)flags; return new StubFont(height); }
+gxFont *gxGraphics::verifyFont(gxFont *font) { return font; }
+void gxGraphics::freeFont(gxFont *font) { delete font; }
+
+gxMovie *gxGraphics::openMovie(const std::string &file, int flags) { (void)file; (void)flags; return new StubMovie(); }
+gxMovie *gxGraphics::verifyMovie(gxMovie *movie) { return movie; }
+void gxGraphics::closeMovie(gxMovie *movie) { delete movie; }
+
+void gxGraphics::vwait() {}
+void gxGraphics::flip(bool vwait) { (void)vwait; }
+void gxGraphics::setGamma(int r, int g, int b, float dr, float dg, float db) { (void)r; (void)g; (void)b; (void)dr; (void)dg; (void)db; }
+void gxGraphics::getGamma(int r, int g, int b, float *dr, float *dg, float *db) {
+	(void)r; (void)g; (void)b; *dr = *dg = *db = 1.0f;
+}
+void gxGraphics::updateGamma(bool calibrate) { (void)calibrate; }
+
+// gxCanvas base methods used by bbgraphics.cpp.
+bool gxCanvas::lock()const { return true; }
+void gxCanvas::unlock()const {}
+void gxCanvas::setOrigin(int x, int y) { (void)x; (void)y; }
+void gxCanvas::setHandle(int x, int y) { (void)x; (void)y; }
+void gxCanvas::setViewport(int x, int y, int ww, int hh) { (void)x; (void)y; (void)ww; (void)hh; }
+void gxCanvas::getOrigin(int *x, int *y)const { *x = 0; *y = 0; }
+void gxCanvas::getHandle(int *x, int *y)const { *x = 0; *y = 0; }
+void gxCanvas::getViewport(int *x, int *y, int *ww, int *hh)const { (void)x; (void)y; (void)ww; (void)hh; }
+unsigned gxCanvas::getMask()const { return 0; }
+void gxCanvas::setMask(unsigned argb) { (void)argb; }
+unsigned gxCanvas::getColor()const { return 0xffffffff; }
+void gxCanvas::setColor(unsigned argb) { (void)argb; }
+unsigned gxCanvas::getClsColor()const { return 0; }
+void gxCanvas::setClsColor(unsigned argb) { (void)argb; }
+void gxCanvas::setFont(gxFont *font) { (void)font; }
+void gxCanvas::backup()const {}
+int gxCanvas::getWidth()const { return 16; }
+int gxCanvas::getHeight()const { return 16; }
+int gxCanvas::getDepth()const { return 32; }
+void gxCanvas::setPixel(int x, int y, unsigned argb) { (void)x; (void)y; (void)argb; }
+unsigned gxCanvas::getPixel(int x, int y)const { (void)x; (void)y; return 0; }
+void gxCanvas::copyPixel(int x, int y, gxCanvas *src, int sx, int sy) { (void)x; (void)y; (void)src; (void)sx; (void)sy; }
+void gxCanvas::copyPixelFast(int x, int y, gxCanvas *src, int sx, int sy) { (void)x; (void)y; (void)src; (void)sx; (void)sy; }
+void gxCanvas::blit(int x, int y, gxCanvas *src, int sx, int sy, int sw, int sh, bool solid) {
+	(void)x; (void)y; (void)src; (void)sx; (void)sy; (void)sw; (void)sh; (void)solid;
+}
+bool gxCanvas::collide(int x, int y, const gxCanvas *src, int sx, int sy, bool solid)const {
+	(void)x; (void)y; (void)src; (void)sx; (void)sy; (void)solid; return false;
+}
+bool gxCanvas::rect_collide(int x, int y, int rx, int ry, int rw, int rh, bool solid)const {
+	(void)x; (void)y; (void)rx; (void)ry; (void)rw; (void)rh; (void)solid; return false;
+}
+void gxCanvas::cls() {}
+void gxCanvas::plot(int x, int y) { (void)x; (void)y; }
+void gxCanvas::line(int x, int y, int x2, int y2) { (void)x; (void)y; (void)x2; (void)y2; }
+void gxCanvas::rect(int x, int y, int ww, int hh, bool solid) { (void)x; (void)y; (void)ww; (void)hh; (void)solid; }
+void gxCanvas::oval(int x, int y, int ww, int hh, bool solid) { (void)x; (void)y; (void)ww; (void)hh; (void)solid; }
+void gxCanvas::text(int x, int y, const std::string &t) { (void)x; (void)y; (void)t; }
+
+// gxFont base methods used by bbgraphics.cpp.
+int gxFont::getWidth()const { return 8; }
+int gxFont::getHeight()const { return height; }
+int gxFont::getWidth(const std::string &text)const { return 8 * (int)text.size(); }
+bool gxFont::isPrintable(int chr)const { return chr >= 32 && chr < 127; }
+
+// gxMovie base methods used by bbgraphics.cpp.
+bool gxMovie::draw(gxCanvas *dest, int x, int y, int w, int h) { (void)dest; (void)x; (void)y; (void)w; (void)h; return false; }
 
 // ---- gxRuntime graphics stubs (normally in gxruntime_b3d.cpp, Windows-only) ----
 gxGraphics *gxRuntime::openGraphics(int w, int h, int d, int driver, int flags) {

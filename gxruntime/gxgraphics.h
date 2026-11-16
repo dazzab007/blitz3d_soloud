@@ -47,8 +47,16 @@ public:
 
 private:
 
+	// Public on non-Windows so test stubs can populate them (the real
+	// gxgraphics.cpp ctor does this; it is Windows-only).
+#ifndef _WIN32
+public:
+#endif
 	gxCanvas *front_canvas,*back_canvas;
 	gxFont *def_font;
+#ifndef _WIN32
+private:
+#endif
 	bool gfx_lost;
 	gxMesh *dummy_mesh;
 

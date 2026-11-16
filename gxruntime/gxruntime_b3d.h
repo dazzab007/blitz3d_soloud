@@ -58,7 +58,11 @@ private:
 #ifdef _WIN32
 	gxRuntime( HINSTANCE hinst,const std::string &cmd_line,HWND hwnd );
 #else
+	// Public on non-Windows so test stubs can instantiate the runtime
+	// (the real ctor/dtor are provided by the Prompt 5 SDL backend).
+public:
 	gxRuntime();
+private:
 #endif
 	~gxRuntime();
 
