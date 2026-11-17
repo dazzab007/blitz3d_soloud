@@ -66,8 +66,11 @@ static map<string,Transform> loader_mat_map;
 static inline void debug3d(){
 	if( debug && !gx_scene ) RTEX( "3D Graphics mode not set" );
 }
-#ifndef _WIN32
-// Entity-family handle -> pointer. Identity on Windows (BB_HANDLE is a raw pointer).
+#ifdef _WIN32
+// Windows: BB_HANDLE(Entity) is Entity*, so eH is an identity cast.
+template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return (T*)h; }
+#else
+// macOS: BB_HANDLE(Entity) is bbH<Entity>, convert to typed pointer via handle table.
 template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return (T*)(Entity*)h; }
 #endif
 static inline void debugTexture( Texture *t ){
