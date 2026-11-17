@@ -24,6 +24,10 @@
 #include "../blitz3d/listener.h"
 #include "../blitz3d/cachedtexture.h"
 
+#include "bb_handle.h"
+#include "bb_handle_types.h"
+#include "../gxruntime/gxfilesystem.h"
+
 gxScene *gx_scene;
 extern gxFileSystem *gx_filesys;
 
@@ -62,6 +66,10 @@ static map<string,Transform> loader_mat_map;
 static inline void debug3d(){
 	if( debug && !gx_scene ) RTEX( "3D Graphics mode not set" );
 }
+#ifndef _WIN32
+// Entity-family handle -> pointer. Identity on Windows (BB_HANDLE is a raw pointer).
+template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return (T*)(Entity*)h; }
+#endif
 static inline void debugTexture( Texture *t ){
 	if( debug && !texture_set.count( t ) ) RTEX( "Texture does not exist" );
 }
@@ -547,13 +555,15 @@ void  bbBrushFX( Brush *b,int fx ){
 ///////////////////
 // MESH COMMANDS //
 ///////////////////
-Entity *  bbCreateMesh( Entity *p ){
+Entity *  bbCreateMesh( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	MeshModel *m=d_new MeshModel();
 	return insertEntity( m,p );
 }
 
-Entity *  bbLoadMesh( BBStr *f,Entity *p ){
+Entity *  bbLoadMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=loadEntity( f->c_str(),MeshLoader::HINT_COLLAPSE );
 	delete f;
@@ -564,7 +574,8 @@ Entity *  bbLoadMesh( BBStr *f,Entity *p ){
 	return insertEntity( m,p );
 }
 
-Entity *  bbLoadAnimMesh( BBStr *f,Entity *p ){
+Entity *  bbLoadAnimMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=loadEntity( f->c_str(),0 );
 	delete f;
@@ -576,31 +587,37 @@ Entity *  bbLoadAnimMesh( BBStr *f,Entity *p ){
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCube( Entity *p ){
+Entity *  bbCreateCube( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=MeshUtil::createCube( Brush() );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateSphere( int segs,Entity *p ){
+Entity *  bbCreateSphere( int segs,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<2 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createSphere( Brush(),segs );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCylinder( int segs,int solid,Entity *p ){
+Entity *  bbCreateCylinder( int segs,int solid,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<3 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createCylinder( Brush(),segs,!!solid );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCone( int segs,int solid,Entity *p ){
+Entity *  bbCreateCone( int segs,int solid,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<3 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createCone( Brush(),segs,!!solid );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCopyMesh( MeshModel *m,Entity *p ){
+Entity *  bbCopyMesh( BB_HANDLE(Entity) m_h,BB_HANDLE(Entity) p_h ){
+	MeshModel *p=eH<MeshModel> ( p_h );
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	debugParent(p);
 
@@ -609,22 +626,26 @@ Entity *  bbCopyMesh( MeshModel *m,Entity *p ){
 	return insertEntity( t,p );
 }
 
-void  bbScaleMesh( MeshModel *m,float x,float y,float z ){
+void  bbScaleMesh( BB_HANDLE(Entity) m_h,float x,float y,float z ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	m->transform( scaleMatrix(x,y,z) );
 }
 
-void  bbRotateMesh( MeshModel *m,float x,float y,float z ){
+void  bbRotateMesh( BB_HANDLE(Entity) m_h,float x,float y,float z ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	m->transform( rotationMatrix(x*dtor,y*dtor,z*dtor) );
 }
 
-void  bbPositionMesh( MeshModel *m,float x,float y,float z ){
+void  bbPositionMesh( BB_HANDLE(Entity) m_h,float x,float y,float z ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	m->transform( Vector(x,y,z) );
 }
 
-void  bbFitMesh( MeshModel *m,float x,float y,float z,float w,float h,float d,int uniform ){
+void  bbFitMesh( BB_HANDLE(Entity) m_h,float x,float y,float z,float w,float h,float d,int uniform ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	Box box( Vector(x,y,z) );
 	box.update( Vector(x+w,y+h,z+d) );
@@ -649,17 +670,21 @@ void  bbFitMesh( MeshModel *m,float x,float y,float z,float w,float h,float d,in
 	m->transform( t );
 }
 
-void  bbFlipMesh( MeshModel *m ){
+void  bbFlipMesh( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	m->flipTriangles();
 }
 
-void  bbPaintMesh( MeshModel *m,Brush *b ){
+void  bbPaintMesh( BB_HANDLE(Entity) m_h,Brush *b ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){ debugMesh(m);debugBrush(b); }
 	m->paint( *b );
 }
 
-void  bbAddMesh( MeshModel *src,MeshModel *dest ){
+void  bbAddMesh( BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	MeshModel *src=eH<MeshModel> ( src_h );
+	MeshModel *dest=eH<MeshModel> ( dest_h );
 	if( debug ){
 		debugMesh(src);debugMesh(dest); 
 		if( src==dest ) RTEX( "A mesh cannot be added to itself" );
@@ -668,42 +693,51 @@ void  bbAddMesh( MeshModel *src,MeshModel *dest ){
 	dest->add( *src );
 }
 
-void  bbUpdateNormals( MeshModel *m ){
+void  bbUpdateNormals( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	m->updateNormals();
 }
 
-void  bbLightMesh( MeshModel *m,float r,float g,float b,float range,float x,float y,float z ){
+void  bbLightMesh( BB_HANDLE(Entity) m_h,float r,float g,float b,float range,float x,float y,float z ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	MeshUtil::lightMesh( m,Vector(x,y,z),Vector(r*ctof,g*ctof,b*ctof),range );
 }
 
-float  bbMeshWidth( MeshModel *m ){
+float  bbMeshWidth( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	return m->getBox().width();
 }
 
-float  bbMeshHeight( MeshModel *m ){
+float  bbMeshHeight( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	return m->getBox().height();
 }
 
-float  bbMeshDepth( MeshModel *m ){
+float  bbMeshDepth( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	return m->getBox().depth();
 }
 
-int  bbMeshesIntersect( MeshModel *a,MeshModel *b ){
+int  bbMeshesIntersect( BB_HANDLE(Entity) a_h,BB_HANDLE(Entity) b_h ){
+	MeshModel *a=eH<MeshModel> ( a_h );
+	MeshModel *b=eH<MeshModel> ( b_h );
 	if( debug ){ debugMesh(a);debugMesh(b); }
 	return a->intersects( *b );
 }
 
-int  bbCountSurfaces( MeshModel *m ){
+int  bbCountSurfaces( BB_HANDLE(Entity) m_h ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
 	return m->getSurfaces().size();
 }
 
-Surface *  bbGetSurface( MeshModel *m,int index ){
+Surface *  bbGetSurface( BB_HANDLE(Entity) m_h,int index ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){
 		debugMesh(m);
 		if( index<1 || index>m->getSurfaces().size() ){
@@ -713,7 +747,8 @@ Surface *  bbGetSurface( MeshModel *m,int index ){
 	return m->getSurfaces()[index-1];
 }
 
-void bbMeshCullBox( MeshModel *m,float x,float y,float z,float width,float height,float depth ){
+void bbMeshCullBox( BB_HANDLE(Entity) m_h,float x,float y,float z,float width,float height,float depth ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){
 		debugMesh( m );
 	}
@@ -724,12 +759,14 @@ void bbMeshCullBox( MeshModel *m,float x,float y,float z,float width,float heigh
 //////////////////////
 // SURFACE COMMANDS //
 //////////////////////
-Surface *  bbFindSurface( MeshModel *m,Brush *b ){
+Surface *  bbFindSurface( BB_HANDLE(Entity) m_h,Brush *b ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){ debugMesh(m);debugBrush(b); }
 	return m->findSurface(*b);
 }
 
-Surface *  bbCreateSurface( MeshModel *m,Brush *b ){
+Surface *  bbCreateSurface( BB_HANDLE(Entity) m_h,Brush *b ){
+	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){ debugMesh(m);if( b ) debugBrush(b); }
 	Surface *s=b ? m->createSurface( *b ) : m->createSurface( Brush() );
 	return s;
@@ -741,7 +778,8 @@ Brush *bbGetSurfaceBrush( Surface *s ){
 	return br;
 }
 
-Brush *bbGetEntityBrush( Model *m ){
+Brush *bbGetEntityBrush( BB_HANDLE(Entity) m_h ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	Brush *br=d_new Brush( m->getBrush() );
 	brush_set.insert( br );
@@ -861,7 +899,8 @@ int  bbTriangleVertex( Surface *s,int n,int v ){
 /////////////////////
 // CAMERA COMMANDS //
 /////////////////////
-Entity *  bbCreateCamera( Entity *p ){
+Entity *  bbCreateCamera( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	int x,y,w,h;
 	gx_canvas->getViewport( &x,&y,&w,&h );
@@ -870,52 +909,62 @@ Entity *  bbCreateCamera( Entity *p ){
 	return insertEntity( c,p );
 }
 
-void  bbCameraZoom( Camera *c,float zoom ){
+void  bbCameraZoom( BB_HANDLE(Entity) c_h,float zoom ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setZoom( zoom );
 }
 
-void  bbCameraRange( Camera *c,float nr,float fr ){
+void  bbCameraRange( BB_HANDLE(Entity) c_h,float nr,float fr ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setRange( nr,fr );
 }
 
-void  bbCameraClsColor( Camera *c,float r,float g,float b ){
+void  bbCameraClsColor( BB_HANDLE(Entity) c_h,float r,float g,float b ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setClsColor( Vector( r*ctof,g*ctof,b*ctof ) );
 }
 
-void  bbCameraClsMode( Camera *c,int cls_color,int cls_zbuffer ){
+void  bbCameraClsMode( BB_HANDLE(Entity) c_h,int cls_color,int cls_zbuffer ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setClsMode( cls_color ? true : false,cls_zbuffer ? true : false );
 }
 
-void  bbCameraProjMode( Camera *c,int mode ){
+void  bbCameraProjMode( BB_HANDLE(Entity) c_h,int mode ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setProjMode( mode );
 }
 
-void  bbCameraViewport( Camera *c,int x,int y,int w,int h ){
+void  bbCameraViewport( BB_HANDLE(Entity) c_h,int x,int y,int w,int h ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setViewport( x,y,w,h );
 }
 
-void  bbCameraFogRange( Camera *c,float nr,float fr ){
+void  bbCameraFogRange( BB_HANDLE(Entity) c_h,float nr,float fr ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setFogRange( nr,fr );
 }
 
-void  bbCameraFogColor( Camera *c,float r,float g,float b ){
+void  bbCameraFogColor( BB_HANDLE(Entity) c_h,float r,float g,float b ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setFogColor( Vector( r*ctof,g*ctof,b*ctof ) );
 }
 
-void  bbCameraFogMode( Camera *c,int mode ){
+void  bbCameraFogMode( BB_HANDLE(Entity) c_h,int mode ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	c->setFogMode( mode );
 }
 
-int  bbCameraProject( Camera *c,float x,float y,float z ){
+int  bbCameraProject( BB_HANDLE(Entity) c_h,float x,float y,float z ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 	Vector v=-c->getWorldTform()*Vector(x,y,z);
 	const Frustum &f=c->getFrustum();
@@ -965,7 +1014,8 @@ static Object *doPick( const Line &l,float radius ){
 	return world->traceRay( l,radius,&picked );
 }
 
-Entity *  bbCameraPick( Camera *c,float x,float y ){
+Entity *  bbCameraPick( BB_HANDLE(Entity) c_h,float x,float y ){
+	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 
 	int vp_x,vp_y,vp_w,vp_h;
@@ -997,7 +1047,8 @@ Entity *  bbLinePick( float x,float y,float z,float dx,float dy,float dz,float r
 	return doPick( l,radius );
 }
 
-Entity *  bbEntityPick( Object *src,float range ){
+Entity *  bbEntityPick( BB_HANDLE(Entity) src_h,float range ){
+	Entity *src=eH<Entity> ( src_h );
 	debugEntity(src);
 
 	Line l( src->getWorldPosition(),src->getWorldTform().m.k * range );
@@ -1005,13 +1056,17 @@ Entity *  bbEntityPick( Object *src,float range ){
 	return doPick( l,0 );
 }
 
-int  bbEntityVisible( Object *src,Object *dest ){
+int  bbEntityVisible( BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Object *src=eH<Object> ( src_h );
+	Object *dest=eH<Object> ( dest_h );
 	if( debug ){ debugObject(src);debugObject(dest); }
 
 	return world->checkLOS( src,dest ) ? 1 : 0;
 }
 
-int  bbEntityInView( Entity *e,Camera *c ){
+int  bbEntityInView( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) c_h ){
+	Entity *e=eH<Entity> ( e_h );
+	Camera *c=eH<Camera> ( c_h );
 	if( debug ){ debugEntity(e);debugCamera(c); }
 	if( Model *p=e->getModel() ){
 		if( MeshModel *m=p->getMeshModel() ){
@@ -1071,23 +1126,27 @@ int  bbPickedTriangle(){
 ////////////////////
 // LIGHT COMMANDS //
 ////////////////////
-Entity *  bbCreateLight( int type,Entity *p ){
+Entity *  bbCreateLight( int type,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Light *t=d_new Light( type );
 	return insertEntity( t,p );
 }
 
-void  bbLightColor( Light *light,float r,float g,float b ){
+void  bbLightColor( BB_HANDLE(Entity) light_h,float r,float g,float b ){
+	Light *light=eH<Light> ( light_h );
 	debugLight(light);
 	light->setColor( Vector(r*ctof,g*ctof,b*ctof) );
 }
 
-void  bbLightRange( Light *light,float range ){
+void  bbLightRange( BB_HANDLE(Entity) light_h,float range ){
+	Light *light=eH<Light> ( light_h );
 	debugLight(light);
 	light->setRange( range );
 }
 
-void  bbLightConeAngles( Light *light,float inner,float outer ){
+void  bbLightConeAngles( BB_HANDLE(Entity) light_h,float inner,float outer ){
+	Light *light=eH<Light> ( light_h );
 	debugLight(light);
 	inner*=dtor;
 	outer*=dtor;
@@ -1101,7 +1160,8 @@ void  bbLightConeAngles( Light *light,float inner,float outer ){
 ////////////////////
 // PIVOT COMMANDS //
 ////////////////////
-Entity *  bbCreatePivot( Entity *p ){
+Entity *  bbCreatePivot( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Pivot *t=d_new Pivot();
 	return insertEntity( t,p );
@@ -1110,14 +1170,16 @@ Entity *  bbCreatePivot( Entity *p ){
 /////////////////////
 // SPRITE COMMANDS //
 /////////////////////
-Entity *  bbCreateSprite( Entity *p ){
+Entity *  bbCreateSprite( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Sprite *s=d_new Sprite();
 	s->setFX( gxScene::FX_FULLBRIGHT );
 	return insertEntity( s,p );
 }
 
-Entity *  bbLoadSprite( BBStr *file,int flags,Entity *p ){
+Entity *  bbLoadSprite( BBStr *file,int flags,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Texture t( *file,flags );
 	delete file;if( !t.getCanvas(0) ) return 0;
@@ -1132,22 +1194,26 @@ Entity *  bbLoadSprite( BBStr *file,int flags,Entity *p ){
 	return insertEntity( s,p );
 }
 
-void  bbRotateSprite( Sprite *s,float angle ){
+void  bbRotateSprite( BB_HANDLE(Entity) s_h,float angle ){
+	Sprite *s=eH<Sprite> ( s_h );
 	debugSprite(s);
 	s->setRotation( angle*dtor );
 }
 
-void  bbScaleSprite( Sprite *s,float x,float y ){
+void  bbScaleSprite( BB_HANDLE(Entity) s_h,float x,float y ){
+	Sprite *s=eH<Sprite> ( s_h );
 	debugSprite(s);
 	s->setScale( x,y );
 }
 
-void  bbHandleSprite( Sprite *s,float x,float y ){
+void  bbHandleSprite( BB_HANDLE(Entity) s_h,float x,float y ){
+	Sprite *s=eH<Sprite> ( s_h );
 	debugSprite(s);
 	s->setHandle( x,y );
 }
 
-void  bbSpriteViewMode( Sprite *s,int mode ){
+void  bbSpriteViewMode( BB_HANDLE(Entity) s_h,int mode ){
+	Sprite *s=eH<Sprite> ( s_h );
 	debugSprite(s);
 	s->setViewmode( mode );
 }
@@ -1155,7 +1221,8 @@ void  bbSpriteViewMode( Sprite *s,int mode ){
 /////////////////////
 // MIRROR COMMANDS //
 /////////////////////
-Entity *  bbCreateMirror( Entity *p ){
+Entity *  bbCreateMirror( BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Mirror *t=d_new Mirror();
 	return insertEntity( t,p );
@@ -1164,7 +1231,8 @@ Entity *  bbCreateMirror( Entity *p ){
 ////////////////////
 // PLANE COMMANDS //
 ////////////////////
-Entity *  bbCreatePlane( int segs,Entity *p ){
+Entity *  bbCreatePlane( int segs,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugParent(p);
 		if( segs<1 || segs>20 ) RTEX( "Illegal number of segments" );
@@ -1176,29 +1244,34 @@ Entity *  bbCreatePlane( int segs,Entity *p ){
 //////////////////
 // MD2 COMMANDS //
 //////////////////
-Entity *  bbLoadMD2( BBStr *file,Entity *p ){
+Entity *  bbLoadMD2( BBStr *file,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	MD2Model *t=d_new MD2Model( *file );delete file;
 	if( !t->getValid() ){ delete t;return 0; }
 	return insertEntity( t,p );
 }
 
-void  bbAnimateMD2( MD2Model *m,int mode,float speed,int first,int last,float trans ){
+void  bbAnimateMD2( BB_HANDLE(Entity) m_h,int mode,float speed,int first,int last,float trans ){
+	MD2Model *m=eH<MD2Model> ( m_h );
 	debugMD2(m);
 	m->startMD2Anim( first,last,mode,speed,trans );
 }
 
-float  bbMD2AnimTime( MD2Model *m ){
+float  bbMD2AnimTime( BB_HANDLE(Entity) m_h ){
+	MD2Model *m=eH<MD2Model> ( m_h );
 	debugMD2(m);
 	return m->getMD2AnimTime();
 }
 
-int  bbMD2AnimLength( MD2Model *m ){
+int  bbMD2AnimLength( BB_HANDLE(Entity) m_h ){
+	MD2Model *m=eH<MD2Model> ( m_h );
 	debugMD2(m);
 	return m->getMD2AnimLength();
 }
 
-int  bbMD2Animating( MD2Model *m ){
+int  bbMD2Animating( BB_HANDLE(Entity) m_h ){
+	MD2Model *m=eH<MD2Model> ( m_h );
 	debugMD2(m);
 	return m->getMD2Animating();
 }
@@ -1206,7 +1279,8 @@ int  bbMD2Animating( MD2Model *m ){
 //////////////////
 // BSP Commands //
 //////////////////
-Entity *  bbLoadBSP( BBStr *file,float gam,Entity *p ){
+Entity *  bbLoadBSP( BBStr *file,float gam,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	CachedTexture::setPath( filenamepath( *file ) );
 	Q3BSPModel *t=d_new Q3BSPModel( *file,gam );delete file;
@@ -1217,12 +1291,14 @@ Entity *  bbLoadBSP( BBStr *file,float gam,Entity *p ){
 	return insertEntity( t,p );
 }
 
-void  bbBSPAmbientLight( Q3BSPModel *t,float r,float g,float b ){
+void  bbBSPAmbientLight( BB_HANDLE(Entity) t_h,float r,float g,float b ){
+	Q3BSPModel *t=eH<Q3BSPModel> ( t_h );
 	debugBSP(t);
 	t->setAmbient( Vector( r*ctof,g*ctof,b*ctof ) );
 }
 
-void  bbBSPLighting( Q3BSPModel *t,int lmap ){
+void  bbBSPLighting( BB_HANDLE(Entity) t_h,int lmap ){
+	Q3BSPModel *t=eH<Q3BSPModel> ( t_h );
 	debugBSP(t);
 	t->setLighting( !!lmap );
 }
@@ -1248,7 +1324,8 @@ static Vector terrainVector( Terrain *t,float x,float y,float z ){
 	return t->getWorldTform() * Vector( v.x,terrainHeight( t,v.x,v.z ),v.z );
 }
 
-Entity *  bbCreateTerrain( int n,Entity *p ){
+Entity *  bbCreateTerrain( int n,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	int shift=0;
 	while( (1<<shift)<n ) ++shift;
@@ -1257,7 +1334,8 @@ Entity *  bbCreateTerrain( int n,Entity *p ){
 	return insertEntity( t,p );
 }
 
-Entity *  bbLoadTerrain( BBStr *file,Entity *p ){
+Entity *  bbLoadTerrain( BBStr *file,BB_HANDLE(Entity) p_h ){
+	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	gxCanvas *c=gx_graphics->loadCanvas( *file,gxCanvas::CANVAS_HIGHCOLOR );
 	if( !c ) RTEX( "Unable to load heightmap image" );
@@ -1281,42 +1359,50 @@ Entity *  bbLoadTerrain( BBStr *file,Entity *p ){
 	return insertEntity( t,p );
 }
 
-void  bbTerrainDetail( Terrain *t,int n,int m ){
+void  bbTerrainDetail( BB_HANDLE(Entity) t_h,int n,int m ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	t->setDetail( n,!!m );
 }
 
-void  bbTerrainShading( Terrain *t,int enable ){
+void  bbTerrainShading( BB_HANDLE(Entity) t_h,int enable ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	t->setShading( !!enable );
 }
 
-float  bbTerrainX( Terrain *t,float x,float y,float z ){
+float  bbTerrainX( BB_HANDLE(Entity) t_h,float x,float y,float z ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	return terrainVector( t,x,y,z ).x;
 }
 
-float  bbTerrainY( Terrain *t,float x,float y,float z ){
+float  bbTerrainY( BB_HANDLE(Entity) t_h,float x,float y,float z ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	return terrainVector( t,x,y,z ).y;
 }
 
-float  bbTerrainZ( Terrain *t,float x,float y,float z ){
+float  bbTerrainZ( BB_HANDLE(Entity) t_h,float x,float y,float z ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	return terrainVector( t,x,y,z ).z;
 }
 
-int  bbTerrainSize( Terrain *t ){
+int  bbTerrainSize( BB_HANDLE(Entity) t_h ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	return t->getSize();
 }
 
-float  bbTerrainHeight( Terrain *t,int x,int z ){
+float  bbTerrainHeight( BB_HANDLE(Entity) t_h,int x,int z ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	return t->getHeight( x,z );
 }
 
-void  bbModifyTerrain( Terrain *t,int x,int z,float h,int realtime ){
+void  bbModifyTerrain( BB_HANDLE(Entity) t_h,int x,int z,float h,int realtime ){
+	Terrain *t=eH<Terrain> ( t_h );
 	debugTerrain(t);
 	t->setHeight( x,z,h,!!realtime );
 }
@@ -1324,7 +1410,8 @@ void  bbModifyTerrain( Terrain *t,int x,int z,float h,int realtime ){
 ////////////////////
 // AUDIO COMMANDS //
 ////////////////////
-Entity *  bbCreateListener( Entity *p,float roll,float dopp,float dist ){
+Entity *  bbCreateListener( BB_HANDLE(Entity) p_h,float roll,float dopp,float dist ){
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugParent(p);
 		if( listener ) RTEX( "Listener already created" );
@@ -1349,7 +1436,9 @@ uint32_t bbEmitSound( Sound *sound,Object *o )
 /////////////////////
 // ENTITY COMMANDS //
 /////////////////////
-Entity *  bbCopyEntity( Entity *e,Entity *p ){
+Entity *  bbCopyEntity( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) p_h ){
+	Entity *e=eH<Entity> ( e_h );
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugEntity(e);
 		debugParent(p); 
@@ -1359,7 +1448,8 @@ Entity *  bbCopyEntity( Entity *e,Entity *p ){
 	return insertEntity( t,p );
 }
 
-void  bbFreeEntity( Entity *e ){
+void  bbFreeEntity( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	if( !e ) return;
 	if( debug ){
 		debugEntity(e);
@@ -1368,20 +1458,24 @@ void  bbFreeEntity( Entity *e ){
 	delete e;
 }
 
-void  bbHideEntity( Entity *e ){
+void  bbHideEntity( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e->setEnabled(false);
 	e->setVisible(false);
 }
 
-void  bbShowEntity( Entity *e ){
+void  bbShowEntity( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e->setVisible(true);
 	e->setEnabled(true);
 	e->getObject()->reset();
 }
 
-void  bbEntityParent( Entity *e,Entity *p,int global ){
+void  bbEntityParent( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) p_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
+	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugEntity(e);
 		debugParent(p);
@@ -1406,21 +1500,24 @@ void  bbEntityParent( Entity *e,Entity *p,int global ){
 	}
 }
 
-int  bbCountChildren( Entity *e ){
+int  bbCountChildren( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	int n=0;
 	for( Entity *p=e->children();p;p=p->successor() ) ++n;
 	return n;
 }
 
-Entity *  bbGetChild( Entity *e,int index ){
+Entity *  bbGetChild( BB_HANDLE(Entity) e_h,int index ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	Entity *p=e->children();
 	while( --index && p ) p=p->successor();
 	return p;
 }
 
-Entity *  bbFindChild( Entity *e,BBStr *t ){
+Entity *  bbFindChild( BB_HANDLE(Entity) e_h,BBStr *t ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e=findChild( e,*t );
 	delete t;
@@ -1430,7 +1527,8 @@ Entity *  bbFindChild( Entity *e,BBStr *t ){
 ////////////////////////
 // ANIMATION COMMANDS //
 ////////////////////////
-int  bbLoadAnimSeq( Object *o,BBStr *f ){
+int  bbLoadAnimSeq( BB_HANDLE(Entity) o_h,BBStr *f ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	if( Animator *anim=o->getAnimator() ){
 		Entity *t=loadEntity( f->c_str(),MeshLoader::HINT_ANIMONLY );
@@ -1448,7 +1546,8 @@ int  bbLoadAnimSeq( Object *o,BBStr *f ){
 	return -1;
 }
 
-void  bbSetAnimTime( Object *o,float time,int seq ){
+void  bbSetAnimTime( BB_HANDLE(Entity) o_h,float time,int seq ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	if( Animator *anim=o->getAnimator() ){
 		anim->setAnimTime( time,seq );
@@ -1457,7 +1556,8 @@ void  bbSetAnimTime( Object *o,float time,int seq ){
 	}
 }
 
-void  bbAnimate( Object *o,int mode,float speed,int seq,float trans ){
+void  bbAnimate( BB_HANDLE(Entity) o_h,int mode,float speed,int seq,float trans ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	if( Animator *anim=o->getAnimator() ){
 		anim->animate( mode,speed,seq,trans );
@@ -1466,7 +1566,8 @@ void  bbAnimate( Object *o,int mode,float speed,int seq,float trans ){
 	}
 }
 
-void  bbSetAnimKey( Object *o,int frame,int pos_key,int rot_key,int scl_key ){
+void  bbSetAnimKey( BB_HANDLE(Entity) o_h,int frame,int pos_key,int rot_key,int scl_key ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	Animation anim=o->getAnimation();
 	if( pos_key ) anim.setPositionKey( frame,o->getLocalPosition() );
@@ -1475,7 +1576,8 @@ void  bbSetAnimKey( Object *o,int frame,int pos_key,int rot_key,int scl_key ){
 	o->setAnimation( anim );
 }
 
-int  bbExtractAnimSeq( Object *o,int first,int last,int seq ){
+int  bbExtractAnimSeq( BB_HANDLE(Entity) o_h,int first,int last,int seq ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	if( Animator *anim=o->getAnimator() ){
 		anim->extractSeq( first,last,seq );
@@ -1484,7 +1586,8 @@ int  bbExtractAnimSeq( Object *o,int first,int last,int seq ){
 	return -1;
 }
 
-int  bbAddAnimSeq( Object *o,int length ){
+int  bbAddAnimSeq( BB_HANDLE(Entity) o_h,int length ){
+	Object *o=eH<Object> ( o_h );
 	debugObject( o );
 	Animator *anim=o->getAnimator();
 	if( anim ){
@@ -1496,25 +1599,29 @@ int  bbAddAnimSeq( Object *o,int length ){
 	return anim->numSeqs()-1;
 }
 
-int  bbAnimSeq( Object *o ){
+int  bbAnimSeq( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	if( Animator *anim=o->getAnimator() ) return anim->animSeq();
 	return -1;
 }
 
-float  bbAnimTime( Object *o ){
+float  bbAnimTime( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	if( Animator *anim=o->getAnimator() ) return anim->animTime();
 	return -1;
 }
 
-int  bbAnimLength( Object *o ){
+int  bbAnimLength( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	if( Animator *anim=o->getAnimator() ) return anim->animLen();
 	return -1;
 }
 
-int  bbAnimating( Object *o ){
+int  bbAnimating( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	if( Animator *anim=o->getAnimator() ) return anim->animating();
 	return 0;
@@ -1523,7 +1630,8 @@ int  bbAnimating( Object *o ){
 ////////////////////////////////
 // ENTITY SPECIAL FX COMMANDS //
 ////////////////////////////////
-void  bbPaintEntity( Model *m,Brush *b ){
+void  bbPaintEntity( BB_HANDLE(Entity) m_h,Brush *b ){
+	Model *m=eH<Model> ( m_h );
 	if( debug ){
 		debugModel(m);
 		debugBrush(b);
@@ -1531,43 +1639,51 @@ void  bbPaintEntity( Model *m,Brush *b ){
 	m->setBrush( *b );
 }
 
-void  bbEntityColor( Model *m,float r,float g,float b ){
+void  bbEntityColor( BB_HANDLE(Entity) m_h,float r,float g,float b ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setColor( Vector( r*ctof,g*ctof,b*ctof ) );
 }
 
-void  bbEntityAlpha( Model *m,float alpha ){
+void  bbEntityAlpha( BB_HANDLE(Entity) m_h,float alpha ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setAlpha( alpha );
 }
 
-void  bbEntityShininess( Model *m,float shininess ){
+void  bbEntityShininess( BB_HANDLE(Entity) m_h,float shininess ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setShininess( shininess );
 }
 
-void  bbEntityTexture( Model *m,Texture *t,int frame,int index ){
+void  bbEntityTexture( BB_HANDLE(Entity) m_h,Texture *t,int frame,int index ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	debugTexture(t);
 	m->setTexture( index,*t,frame );
 }
 
-void  bbEntityBlend( Model *m,int blend ){
+void  bbEntityBlend( BB_HANDLE(Entity) m_h,int blend ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setBlend( blend );
 }
 
-void  bbEntityFX( Model *m,int fx ){
+void  bbEntityFX( BB_HANDLE(Entity) m_h,int fx ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setFX( fx );
 }
 
-void  bbEntityAutoFade( Model *m,float nr,float fr ){
+void  bbEntityAutoFade( BB_HANDLE(Entity) m_h,float nr,float fr ){
+	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	m->setAutoFade( nr,fr );
 }
 
-void  bbEntityOrder( Object *o,int n ){
+void  bbEntityOrder( BB_HANDLE(Entity) o_h,int n ){
+	Object *o=eH<Object> ( o_h );
 	if( debug ){
 		debugEntity(o);
 		if( !o->getModel() && !o->getCamera() ){
@@ -1580,42 +1696,51 @@ void  bbEntityOrder( Object *o,int n ){
 //////////////////////////////
 // ENTITY PROPERTY COMMANDS //
 //////////////////////////////
-float  bbEntityX( Entity *e,int global ){
+float  bbEntityX( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return global ? e->getWorldPosition().x : e->getLocalPosition().x;
 }
 
-float  bbEntityY( Entity *e,int global ){
+float  bbEntityY( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return global ? e->getWorldPosition().y : e->getLocalPosition().y;
 }
 
-float  bbEntityZ( Entity *e,int global ){
+float  bbEntityZ( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return global ? e->getWorldPosition().z : e->getLocalPosition().z;
 }
 
-float  bbEntityPitch( Entity *e,int global ){
+float  bbEntityPitch( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return quatPitch( global ? e->getWorldRotation() : e->getLocalRotation() ) * rtod;
 }
 
-float  bbEntityYaw( Entity *e,int global ){
+float  bbEntityYaw( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return quatYaw( global ? e->getWorldRotation() : e->getLocalRotation() ) * rtod;
 }
 
-float  bbEntityRoll( Entity *e,int global ){
+float  bbEntityRoll( BB_HANDLE(Entity) e_h,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return quatRoll( global ? e->getWorldRotation() : e->getLocalRotation() ) * rtod;
 }
 
-float  bbGetMatElement( Entity *e,int row,int col ){
+float  bbGetMatElement( BB_HANDLE(Entity) e_h,int row,int col ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return row<3 ? e->getWorldTform().m[row][col] : e->getWorldTform().v[col];
 }
 
-void  bbTFormPoint( float x,float y,float z,Entity *src,Entity *dest ){
+void  bbTFormPoint( float x,float y,float z,BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	if( debug ){
 		if( src ) debugEntity(src);
 		if( dest ) debugEntity(dest);
@@ -1625,7 +1750,9 @@ void  bbTFormPoint( float x,float y,float z,Entity *src,Entity *dest ){
 	if( dest ) tformed=-dest->getWorldTform() * tformed;
 }
 
-void  bbTFormVector( float x,float y,float z,Entity *src,Entity *dest ){
+void  bbTFormVector( float x,float y,float z,BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	if( debug ){
 		if( src ) debugEntity(src);
 		if( dest ) debugEntity(dest);
@@ -1635,7 +1762,9 @@ void  bbTFormVector( float x,float y,float z,Entity *src,Entity *dest ){
 	if( dest ) tformed=-dest->getWorldTform().m * tformed;
 }
 
-void  bbTFormNormal( float x,float y,float z,Entity *src,Entity *dest ){
+void  bbTFormNormal( float x,float y,float z,BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	if( debug ){
 		if( src ) debugEntity(src);
 		if( dest ) debugEntity(dest);
@@ -1666,7 +1795,9 @@ float  bbVectorPitch( float x,float y,float z ){
 	return Vector(x,y,z).pitch() * rtod;
 }
 
-float  bbDeltaYaw( Entity *src,Entity *dest ){
+float  bbDeltaYaw( BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	float x=src->getWorldTform().m.k.yaw();
 	float y=(dest->getWorldTform().v-src->getWorldTform().v).yaw();
 	float d=y-x;
@@ -1675,7 +1806,9 @@ float  bbDeltaYaw( Entity *src,Entity *dest ){
 	return d*rtod;
 }
 
-float  bbDeltaPitch( Entity *src,Entity *dest ){
+float  bbDeltaPitch( BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	float x=src->getWorldTform().m.k.pitch();
 	float y=(dest->getWorldTform().v-src->getWorldTform().v).pitch();
 	float d=y-x;
@@ -1687,7 +1820,8 @@ float  bbDeltaPitch( Entity *src,Entity *dest ){
 ///////////////////////////////
 // ENTITY COLLISION COMMANDS //
 ///////////////////////////////
-void  bbResetEntity( Object *o ){
+void  bbResetEntity( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	o->reset();
 }
@@ -1700,7 +1834,8 @@ static void entityType( Entity *e,int type ){
 	}
 }
 
-void  bbEntityType( Object *o,int type,int recurs ){
+void  bbEntityType( BB_HANDLE(Entity) o_h,int type,int recurs ){
+	Object *o=eH<Object> ( o_h );
 	if( debug ){
 		debugObject(o);
 		if( type<0 || type>999 ) RTEX( "EntityType ID must be in the range 0...999" );
@@ -1712,36 +1847,42 @@ void  bbEntityType( Object *o,int type,int recurs ){
 	}
 }
 
-void  bbEntityPickMode( Object *o,int mode,int obs ){
+void  bbEntityPickMode( BB_HANDLE(Entity) o_h,int mode,int obs ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	o->setPickGeometry( mode );
 	o->setObscurer( !!obs );
 }
 
-Entity *  bbGetParent( Entity *e ){
+Entity *  bbGetParent( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return e->getParent();
 }
 
-int  bbGetEntityType( Object *o ){
+int  bbGetEntityType( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	return o->getCollisionType();
 }
 
-void  bbEntityRadius( Object *o,float x_radius,float y_radius ){
+void  bbEntityRadius( BB_HANDLE(Entity) o_h,float x_radius,float y_radius ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	Vector radii( x_radius,y_radius ? y_radius : x_radius,x_radius );
 	o->setCollisionRadii( radii );
 }
 
-void  bbEntityBox( Object *o,float x,float y,float z,float w,float h,float d ){
+void  bbEntityBox( BB_HANDLE(Entity) o_h,float x,float y,float z,float w,float h,float d ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	Box b( Vector(x,y,z) );
 	b.update( Vector( x+w,y+h,z+d ) );
 	o->setCollisionBox( b );
 }
 
-Object *  bbEntityCollided( Object *o,int type ){
+Object *  bbEntityCollided( BB_HANDLE(Entity) o_h,int type ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	Object::Collisions::const_iterator it;
 	const Object::Collisions &c=o->getCollisions();
@@ -1752,62 +1893,75 @@ Object *  bbEntityCollided( Object *o,int type ){
 	return 0;
 }
 
-int  bbCountCollisions( Object *o ){
+int  bbCountCollisions( BB_HANDLE(Entity) o_h ){
+	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	return o->getCollisions().size();
 }
 
-float  bbCollisionX( Object *o,int index ){
+float  bbCollisionX( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->coords.x;
 }
 
-float  bbCollisionY( Object *o,int index ){
+float  bbCollisionY( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->coords.y;
 }
 
-float  bbCollisionZ( Object *o,int index ){
+float  bbCollisionZ( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->coords.z;
 }
 
-float  bbCollisionNX( Object *o,int index ){
+float  bbCollisionNX( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.normal.x;
 }
 
-float  bbCollisionNY( Object *o,int index ){
+float  bbCollisionNY( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.normal.y;
 }
 
-float  bbCollisionNZ( Object *o,int index ){
+float  bbCollisionNZ( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.normal.z;
 }
 
-float  bbCollisionTime( Object *o,int index ){
+float  bbCollisionTime( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.time;
 }
 
-Object *  bbCollisionEntity( Object *o,int index ){
+Object *  bbCollisionEntity( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->with;
 }
 
-void *  bbCollisionSurface( Object *o,int index ){
+void *  bbCollisionSurface( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.surface;
 }
 
-int  bbCollisionTriangle( Object *o,int index ){
+int  bbCollisionTriangle( BB_HANDLE(Entity) o_h,int index ){
+	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->collision.index;
 }
 
-float  bbEntityDistance( Entity *src,Entity *dest ){
+float  bbEntityDistance( BB_HANDLE(Entity) src_h,BB_HANDLE(Entity) dest_h ){
+	Entity *src=eH<Entity> ( src_h );
+	Entity *dest=eH<Entity> ( dest_h );
 	debugEntity(src);
 	debugEntity(dest);
 	return src->getWorldPosition().distance( dest->getWorldPosition() );
@@ -1816,53 +1970,62 @@ float  bbEntityDistance( Entity *src,Entity *dest ){
 ////////////////////////////////////
 // ENTITY TRANSFORMATION COMMANDS //
 ////////////////////////////////////
-void  bbMoveEntity( Entity *e,float x,float y,float z ){
+void  bbMoveEntity( BB_HANDLE(Entity) e_h,float x,float y,float z ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e->setLocalPosition( e->getLocalPosition()+e->getLocalRotation()*Vector(x,y,z) );
 }
 
-void  bbTurnEntity( Entity *e,float p,float y,float r,int global ){
+void  bbTurnEntity( BB_HANDLE(Entity) e_h,float p,float y,float r,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	global?
 	e->setWorldRotation( rotationQuat( p*dtor,y*dtor,r*dtor )*e->getWorldRotation() ):
 	e->setLocalRotation( e->getLocalRotation()*rotationQuat( p*dtor,y*dtor,r*dtor ) );
 }
 
-void  bbTranslateEntity( Entity *e,float x,float y,float z,int global ){
+void  bbTranslateEntity( BB_HANDLE(Entity) e_h,float x,float y,float z,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	global?
 	e->setWorldPosition( e->getWorldPosition()+Vector( x,y,z ) ):
 	e->setLocalPosition( e->getLocalPosition()+Vector( x,y,z ) );
 }
 
-void  bbPositionEntity( Entity *e,float x,float y,float z,int global ){
+void  bbPositionEntity( BB_HANDLE(Entity) e_h,float x,float y,float z,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	global?
 	e->setWorldPosition(Vector(x,y,z)):
 	e->setLocalPosition(Vector(x,y,z));
 }
 
-void  bbScaleEntity( Entity *e,float x,float y,float z,int global ){
+void  bbScaleEntity( BB_HANDLE(Entity) e_h,float x,float y,float z,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	global?
 	e->setWorldScale(Vector(x,y,z)):
 	e->setLocalScale(Vector(x,y,z));
 }
 
-void  bbRotateEntity( Entity *e,float p,float y,float r,int global ){
+void  bbRotateEntity( BB_HANDLE(Entity) e_h,float p,float y,float r,int global ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	global?
 	e->setWorldRotation( rotationQuat( p*dtor,y*dtor,r*dtor ) ):
 	e->setLocalRotation( rotationQuat( p*dtor,y*dtor,r*dtor ) );
 }
 
-void  bbPointEntity( Entity *e,Entity *t,float roll ){
+void  bbPointEntity( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) t_h,float roll ){
+	Entity *e=eH<Entity> ( e_h );
+	Entity *t=eH<Entity> ( t_h );
 	if( debug ){ debugEntity(e);debugEntity(t); }
 	Vector v=t->getWorldTform().v-e->getWorldTform().v;
 	e->setWorldRotation( rotationQuat( v.pitch(),v.yaw(),roll*dtor ) );
 }
 
-void  bbAlignToVector( Entity *e,float nx,float ny,float nz,int axis,float rate ){
+void  bbAlignToVector( BB_HANDLE(Entity) e_h,float nx,float ny,float nz,int axis,float rate ){
+	Entity *e=eH<Entity> ( e_h );
 	Vector ax( nx,ny,nz );
 	float l=ax.length();
 	if( l<=EPSILON ) return;
@@ -1890,18 +2053,21 @@ void  bbAlignToVector( Entity *e,float nx,float ny,float nz,int axis,float rate 
 //////////////////////////
 // ENTITY MISC COMMANDS //
 //////////////////////////
-void  bbNameEntity( Entity *e,BBStr *t ){
+void  bbNameEntity( BB_HANDLE(Entity) e_h,BBStr *t ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e->setName( *t );
 	delete t;
 }
 
-BBStr *  bbEntityName( Entity *e ){
+BBStr *  bbEntityName( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return d_new BBStr( e->getName() );
 }
 
-BBStr *bbEntityClass( Entity *e ){
+BBStr *bbEntityClass( BB_HANDLE(Entity) e_h ){
+	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	const char *p="Pivot";
 	if( e->getLight() ) p="Light";
@@ -1975,264 +2141,264 @@ bool blitz3d_destroy(){
 }
 
 void blitz3d_link( void (*rtSym)( const char *sym,void *pc ) ){
-	rtSym( "LoaderMatrix$file_ext#xx#xy#xz#yx#yy#yz#zx#zy#zz",bbLoaderMatrix );
-	rtSym( "HWMultiTex%enable",bbHWMultiTex );
-	rtSym( "%HWTexUnits",bbHWTexUnits );
-	rtSym( "%GfxDriverCaps3D",bbGfxDriverCaps3D );
-	rtSym( "WBuffer%enable",bbWBuffer );
-	rtSym( "Dither%enable",bbDither );
-	rtSym( "AntiAlias%enable",bbAntiAlias );
-	rtSym( "WireFrame%enable",bbWireFrame );
-	rtSym( "AmbientLight#red#green#blue",bbAmbientLight );
-	rtSym( "ClearCollisions",bbClearCollisions );
-	rtSym( "Collisions%source_type%destination_type%method%response",bbCollisions );
-	rtSym( "UpdateWorld#elapsed_time=1",bbUpdateWorld );
-	rtSym( "CaptureWorld",bbCaptureWorld );
-	rtSym( "RenderWorld#tween=1",bbRenderWorld );
-	rtSym( "ClearWorld%entities=1%brushes=1%textures=1",bbClearWorld );
-	rtSym( "%ActiveTextures",bbActiveTextures );
-	rtSym( "%TrisRendered",bbTrisRendered );
-	rtSym( "#Stats3D%type",bbStats3D );
+	rtSym( "LoaderMatrix$file_ext#xx#xy#xz#yx#yy#yz#zx#zy#zz",RTSYM_CAST(bbLoaderMatrix));
+	rtSym( "HWMultiTex%enable",RTSYM_CAST(bbHWMultiTex));
+	rtSym( "%HWTexUnits",RTSYM_CAST(bbHWTexUnits));
+	rtSym( "%GfxDriverCaps3D",RTSYM_CAST(bbGfxDriverCaps3D));
+	rtSym( "WBuffer%enable",RTSYM_CAST(bbWBuffer));
+	rtSym( "Dither%enable",RTSYM_CAST(bbDither));
+	rtSym( "AntiAlias%enable",RTSYM_CAST(bbAntiAlias));
+	rtSym( "WireFrame%enable",RTSYM_CAST(bbWireFrame));
+	rtSym( "AmbientLight#red#green#blue",RTSYM_CAST(bbAmbientLight));
+	rtSym( "ClearCollisions",RTSYM_CAST(bbClearCollisions));
+	rtSym( "Collisions%source_type%destination_type%method%response",RTSYM_CAST(bbCollisions));
+	rtSym( "UpdateWorld#elapsed_time=1",RTSYM_CAST(bbUpdateWorld));
+	rtSym( "CaptureWorld",RTSYM_CAST(bbCaptureWorld));
+	rtSym( "RenderWorld#tween=1",RTSYM_CAST(bbRenderWorld));
+	rtSym( "ClearWorld%entities=1%brushes=1%textures=1",RTSYM_CAST(bbClearWorld));
+	rtSym( "%ActiveTextures",RTSYM_CAST(bbActiveTextures));
+	rtSym( "%TrisRendered",RTSYM_CAST(bbTrisRendered));
+	rtSym( "#Stats3D%type",RTSYM_CAST(bbStats3D));
 
-	rtSym( "%CreateTexture%width%height%flags=0%frames=1",bbCreateTexture );
-	rtSym( "%LoadTexture$file%flags=1",bbLoadTexture );
-	rtSym( "%LoadAnimTexture$file%flags%width%height%first%count",bbLoadAnimTexture );
-	rtSym( "FreeTexture%texture",bbFreeTexture );
-	rtSym( "TextureBlend%texture%blend",bbTextureBlend );
-	rtSym( "TextureCoords%texture%coords",bbTextureCoords );
-	rtSym( "ScaleTexture%texture#u_scale#v_scale",bbScaleTexture );
-	rtSym( "RotateTexture%texture#angle",bbRotateTexture );
-	rtSym( "PositionTexture%texture#u_offset#v_offset",bbPositionTexture );
-	rtSym( "%TextureWidth%texture",bbTextureWidth );
-	rtSym( "%TextureHeight%texture",bbTextureHeight );
-	rtSym( "$TextureName%texture",bbTextureName );
-	rtSym( "SetCubeFace%texture%face",bbSetCubeFace );
-	rtSym( "SetCubeMode%texture%mode",bbSetCubeMode );
-	rtSym( "%TextureBuffer%texture%frame=0",bbTextureBuffer );
-	rtSym( "ClearTextureFilters",bbClearTextureFilters );
-	rtSym( "TextureFilter$match_text%texture_flags=0",bbTextureFilter );
+	rtSym( "%CreateTexture%width%height%flags=0%frames=1",RTSYM_CAST(bbCreateTexture));
+	rtSym( "%LoadTexture$file%flags=1",RTSYM_CAST(bbLoadTexture));
+	rtSym( "%LoadAnimTexture$file%flags%width%height%first%count",RTSYM_CAST(bbLoadAnimTexture));
+	rtSym( "FreeTexture%texture",RTSYM_CAST(bbFreeTexture));
+	rtSym( "TextureBlend%texture%blend",RTSYM_CAST(bbTextureBlend));
+	rtSym( "TextureCoords%texture%coords",RTSYM_CAST(bbTextureCoords));
+	rtSym( "ScaleTexture%texture#u_scale#v_scale",RTSYM_CAST(bbScaleTexture));
+	rtSym( "RotateTexture%texture#angle",RTSYM_CAST(bbRotateTexture));
+	rtSym( "PositionTexture%texture#u_offset#v_offset",RTSYM_CAST(bbPositionTexture));
+	rtSym( "%TextureWidth%texture",RTSYM_CAST(bbTextureWidth));
+	rtSym( "%TextureHeight%texture",RTSYM_CAST(bbTextureHeight));
+	rtSym( "$TextureName%texture",RTSYM_CAST(bbTextureName));
+	rtSym( "SetCubeFace%texture%face",RTSYM_CAST(bbSetCubeFace));
+	rtSym( "SetCubeMode%texture%mode",RTSYM_CAST(bbSetCubeMode));
+	rtSym( "%TextureBuffer%texture%frame=0",RTSYM_CAST(bbTextureBuffer));
+	rtSym( "ClearTextureFilters",RTSYM_CAST(bbClearTextureFilters));
+	rtSym( "TextureFilter$match_text%texture_flags=0",RTSYM_CAST(bbTextureFilter));
 
-	rtSym( "%CreateBrush#red=255#green=255#blue=255",bbCreateBrush );
-	rtSym( "%LoadBrush$file%texture_flags=1#u_scale=1#v_scale=1",bbLoadBrush );
-	rtSym( "FreeBrush%brush",bbFreeBrush );
-	rtSym( "BrushColor%brush#red#green#blue",bbBrushColor );
-	rtSym( "BrushAlpha%brush#alpha",bbBrushAlpha );
-	rtSym( "BrushShininess%brush#shininess",bbBrushShininess );
-	rtSym( "BrushTexture%brush%texture%frame=0%index=0",bbBrushTexture );
-	rtSym( "%GetBrushTexture%brush%index=0",bbGetBrushTexture );
-	rtSym( "BrushBlend%brush%blend",bbBrushBlend );
-	rtSym( "BrushFX%brush%fx",bbBrushFX );
+	rtSym( "%CreateBrush#red=255#green=255#blue=255",RTSYM_CAST(bbCreateBrush));
+	rtSym( "%LoadBrush$file%texture_flags=1#u_scale=1#v_scale=1",RTSYM_CAST(bbLoadBrush));
+	rtSym( "FreeBrush%brush",RTSYM_CAST(bbFreeBrush));
+	rtSym( "BrushColor%brush#red#green#blue",RTSYM_CAST(bbBrushColor));
+	rtSym( "BrushAlpha%brush#alpha",RTSYM_CAST(bbBrushAlpha));
+	rtSym( "BrushShininess%brush#shininess",RTSYM_CAST(bbBrushShininess));
+	rtSym( "BrushTexture%brush%texture%frame=0%index=0",RTSYM_CAST(bbBrushTexture));
+	rtSym( "%GetBrushTexture%brush%index=0",RTSYM_CAST(bbGetBrushTexture));
+	rtSym( "BrushBlend%brush%blend",RTSYM_CAST(bbBrushBlend));
+	rtSym( "BrushFX%brush%fx",RTSYM_CAST(bbBrushFX));
 
-	rtSym( "%LoadMesh$file%parent=0",bbLoadMesh );
-	rtSym( "%LoadAnimMesh$file%parent=0",bbLoadAnimMesh );
-	rtSym( "%LoadAnimSeq%entity$file",bbLoadAnimSeq );
+	rtSym( "%LoadMesh$file%parent=0",RTSYM_CAST(bbLoadMesh));
+	rtSym( "%LoadAnimMesh$file%parent=0",RTSYM_CAST(bbLoadAnimMesh));
+	rtSym( "%LoadAnimSeq%entity$file",RTSYM_CAST(bbLoadAnimSeq));
 
-	rtSym( "%CreateMesh%parent=0",bbCreateMesh );
-	rtSym( "%CreateCube%parent=0",bbCreateCube );
-	rtSym( "%CreateSphere%segments=8%parent=0",bbCreateSphere );
-	rtSym( "%CreateCylinder%segments=8%solid=1%parent=0",bbCreateCylinder );
-	rtSym( "%CreateCone%segments=8%solid=1%parent=0",bbCreateCone );
-	rtSym( "%CopyMesh%mesh%parent=0",bbCopyMesh );
-	rtSym( "ScaleMesh%mesh#x_scale#y_scale#z_scale",bbScaleMesh );
-	rtSym( "RotateMesh%mesh#pitch#yaw#roll",bbRotateMesh );
-	rtSym( "PositionMesh%mesh#x#y#z",bbPositionMesh );
-	rtSym( "FitMesh%mesh#x#y#z#width#height#depth%uniform=0",bbFitMesh );
-	rtSym( "FlipMesh%mesh",bbFlipMesh );
-	rtSym( "PaintMesh%mesh%brush",bbPaintMesh );
-	rtSym( "AddMesh%source_mesh%dest_mesh",bbAddMesh );
-	rtSym( "UpdateNormals%mesh",bbUpdateNormals );
-	rtSym( "LightMesh%mesh#red#green#blue#range=0#x=0#y=0#z=0",bbLightMesh );
-	rtSym( "#MeshWidth%mesh",bbMeshWidth );
-	rtSym( "#MeshHeight%mesh",bbMeshHeight );
-	rtSym( "#MeshDepth%mesh",bbMeshDepth );
-	rtSym( "%MeshesIntersect%mesh_a%mesh_b",bbMeshesIntersect );
-	rtSym( "%CountSurfaces%mesh",bbCountSurfaces );
-	rtSym( "%GetSurface%mesh%surface_index",bbGetSurface );
-	rtSym( "MeshCullBox%mesh#x#y#z#width#height#depth",bbMeshCullBox );
+	rtSym( "%CreateMesh%parent=0",RTSYM_CAST(bbCreateMesh));
+	rtSym( "%CreateCube%parent=0",RTSYM_CAST(bbCreateCube));
+	rtSym( "%CreateSphere%segments=8%parent=0",RTSYM_CAST(bbCreateSphere));
+	rtSym( "%CreateCylinder%segments=8%solid=1%parent=0",RTSYM_CAST(bbCreateCylinder));
+	rtSym( "%CreateCone%segments=8%solid=1%parent=0",RTSYM_CAST(bbCreateCone));
+	rtSym( "%CopyMesh%mesh%parent=0",RTSYM_CAST(bbCopyMesh));
+	rtSym( "ScaleMesh%mesh#x_scale#y_scale#z_scale",RTSYM_CAST(bbScaleMesh));
+	rtSym( "RotateMesh%mesh#pitch#yaw#roll",RTSYM_CAST(bbRotateMesh));
+	rtSym( "PositionMesh%mesh#x#y#z",RTSYM_CAST(bbPositionMesh));
+	rtSym( "FitMesh%mesh#x#y#z#width#height#depth%uniform=0",RTSYM_CAST(bbFitMesh));
+	rtSym( "FlipMesh%mesh",RTSYM_CAST(bbFlipMesh));
+	rtSym( "PaintMesh%mesh%brush",RTSYM_CAST(bbPaintMesh));
+	rtSym( "AddMesh%source_mesh%dest_mesh",RTSYM_CAST(bbAddMesh));
+	rtSym( "UpdateNormals%mesh",RTSYM_CAST(bbUpdateNormals));
+	rtSym( "LightMesh%mesh#red#green#blue#range=0#x=0#y=0#z=0",RTSYM_CAST(bbLightMesh));
+	rtSym( "#MeshWidth%mesh",RTSYM_CAST(bbMeshWidth));
+	rtSym( "#MeshHeight%mesh",RTSYM_CAST(bbMeshHeight));
+	rtSym( "#MeshDepth%mesh",RTSYM_CAST(bbMeshDepth));
+	rtSym( "%MeshesIntersect%mesh_a%mesh_b",RTSYM_CAST(bbMeshesIntersect));
+	rtSym( "%CountSurfaces%mesh",RTSYM_CAST(bbCountSurfaces));
+	rtSym( "%GetSurface%mesh%surface_index",RTSYM_CAST(bbGetSurface));
+	rtSym( "MeshCullBox%mesh#x#y#z#width#height#depth",RTSYM_CAST(bbMeshCullBox));
 	
-	rtSym( "%CreateSurface%mesh%brush=0",bbCreateSurface );
-	rtSym( "%GetSurfaceBrush%surface",bbGetSurfaceBrush );
-	rtSym( "%GetEntityBrush%entity",bbGetEntityBrush );
-	rtSym( "%FindSurface%mesh%brush",bbFindSurface );
-	rtSym( "ClearSurface%surface%clear_vertices=1%clear_triangles=1",bbClearSurface );
-	rtSym( "PaintSurface%surface%brush",bbPaintSurface );
-	rtSym( "%AddVertex%surface#x#y#z#u=0#v=0#w=1",bbAddVertex );
-	rtSym( "%AddTriangle%surface%v0%v1%v2",bbAddTriangle );
-	rtSym( "VertexCoords%surface%index#x#y#z",bbVertexCoords );
-	rtSym( "VertexNormal%surface%index#nx#ny#nz",bbVertexNormal );
-	rtSym( "VertexColor%surface%index#red#green#blue#alpha=1",bbVertexColor );
-	rtSym( "VertexTexCoords%surface%index#u#v#w=1%coord_set=0",bbVertexTexCoords );
-	rtSym( "%CountVertices%surface",bbCountVertices );
-	rtSym( "%CountTriangles%surface",bbCountTriangles );
-	rtSym( "#VertexX%surface%index",bbVertexX );
-	rtSym( "#VertexY%surface%index",bbVertexY );
-	rtSym( "#VertexZ%surface%index",bbVertexZ );
-	rtSym( "#VertexNX%surface%index",bbVertexNX );
-	rtSym( "#VertexNY%surface%index",bbVertexNY );
-	rtSym( "#VertexNZ%surface%index",bbVertexNZ );
-	rtSym( "#VertexRed%surface%index",bbVertexRed );
-	rtSym( "#VertexGreen%surface%index",bbVertexGreen );
-	rtSym( "#VertexBlue%surface%index",bbVertexBlue );
-	rtSym( "#VertexAlpha%surface%index",bbVertexAlpha );
-	rtSym( "#VertexU%surface%index%coord_set=0",bbVertexU );
-	rtSym( "#VertexV%surface%index%coord_set=0",bbVertexV );
-	rtSym( "#VertexW%surface%index%coord_set=0",bbVertexW );
-	rtSym( "%TriangleVertex%surface%index%vertex",bbTriangleVertex );
+	rtSym( "%CreateSurface%mesh%brush=0",RTSYM_CAST(bbCreateSurface));
+	rtSym( "%GetSurfaceBrush%surface",RTSYM_CAST(bbGetSurfaceBrush));
+	rtSym( "%GetEntityBrush%entity",RTSYM_CAST(bbGetEntityBrush));
+	rtSym( "%FindSurface%mesh%brush",RTSYM_CAST(bbFindSurface));
+	rtSym( "ClearSurface%surface%clear_vertices=1%clear_triangles=1",RTSYM_CAST(bbClearSurface));
+	rtSym( "PaintSurface%surface%brush",RTSYM_CAST(bbPaintSurface));
+	rtSym( "%AddVertex%surface#x#y#z#u=0#v=0#w=1",RTSYM_CAST(bbAddVertex));
+	rtSym( "%AddTriangle%surface%v0%v1%v2",RTSYM_CAST(bbAddTriangle));
+	rtSym( "VertexCoords%surface%index#x#y#z",RTSYM_CAST(bbVertexCoords));
+	rtSym( "VertexNormal%surface%index#nx#ny#nz",RTSYM_CAST(bbVertexNormal));
+	rtSym( "VertexColor%surface%index#red#green#blue#alpha=1",RTSYM_CAST(bbVertexColor));
+	rtSym( "VertexTexCoords%surface%index#u#v#w=1%coord_set=0",RTSYM_CAST(bbVertexTexCoords));
+	rtSym( "%CountVertices%surface",RTSYM_CAST(bbCountVertices));
+	rtSym( "%CountTriangles%surface",RTSYM_CAST(bbCountTriangles));
+	rtSym( "#VertexX%surface%index",RTSYM_CAST(bbVertexX));
+	rtSym( "#VertexY%surface%index",RTSYM_CAST(bbVertexY));
+	rtSym( "#VertexZ%surface%index",RTSYM_CAST(bbVertexZ));
+	rtSym( "#VertexNX%surface%index",RTSYM_CAST(bbVertexNX));
+	rtSym( "#VertexNY%surface%index",RTSYM_CAST(bbVertexNY));
+	rtSym( "#VertexNZ%surface%index",RTSYM_CAST(bbVertexNZ));
+	rtSym( "#VertexRed%surface%index",RTSYM_CAST(bbVertexRed));
+	rtSym( "#VertexGreen%surface%index",RTSYM_CAST(bbVertexGreen));
+	rtSym( "#VertexBlue%surface%index",RTSYM_CAST(bbVertexBlue));
+	rtSym( "#VertexAlpha%surface%index",RTSYM_CAST(bbVertexAlpha));
+	rtSym( "#VertexU%surface%index%coord_set=0",RTSYM_CAST(bbVertexU));
+	rtSym( "#VertexV%surface%index%coord_set=0",RTSYM_CAST(bbVertexV));
+	rtSym( "#VertexW%surface%index%coord_set=0",RTSYM_CAST(bbVertexW));
+	rtSym( "%TriangleVertex%surface%index%vertex",RTSYM_CAST(bbTriangleVertex));
 
-	rtSym( "%CreateCamera%parent=0",bbCreateCamera );
-	rtSym( "CameraZoom%camera#zoom",bbCameraZoom );
-	rtSym( "CameraRange%camera#near#far",bbCameraRange );
-	rtSym( "CameraClsColor%camera#red#green#blue",bbCameraClsColor );
-	rtSym( "CameraClsMode%camera%cls_color%cls_zbuffer",bbCameraClsMode );
-	rtSym( "CameraProjMode%camera%mode",bbCameraProjMode );
-	rtSym( "CameraViewport%camera%x%y%width%height",bbCameraViewport );
-	rtSym( "CameraFogColor%camera#red#green#blue",bbCameraFogColor );
-	rtSym( "CameraFogRange%camera#near#far",bbCameraFogRange );
-	rtSym( "CameraFogMode%camera%mode",bbCameraFogMode );
-	rtSym( "CameraProject%camera#x#y#z",bbCameraProject );
-	rtSym( "#ProjectedX",bbProjectedX );
-	rtSym( "#ProjectedY",bbProjectedY );
-	rtSym( "#ProjectedZ",bbProjectedZ );
+	rtSym( "%CreateCamera%parent=0",RTSYM_CAST(bbCreateCamera));
+	rtSym( "CameraZoom%camera#zoom",RTSYM_CAST(bbCameraZoom));
+	rtSym( "CameraRange%camera#near#far",RTSYM_CAST(bbCameraRange));
+	rtSym( "CameraClsColor%camera#red#green#blue",RTSYM_CAST(bbCameraClsColor));
+	rtSym( "CameraClsMode%camera%cls_color%cls_zbuffer",RTSYM_CAST(bbCameraClsMode));
+	rtSym( "CameraProjMode%camera%mode",RTSYM_CAST(bbCameraProjMode));
+	rtSym( "CameraViewport%camera%x%y%width%height",RTSYM_CAST(bbCameraViewport));
+	rtSym( "CameraFogColor%camera#red#green#blue",RTSYM_CAST(bbCameraFogColor));
+	rtSym( "CameraFogRange%camera#near#far",RTSYM_CAST(bbCameraFogRange));
+	rtSym( "CameraFogMode%camera%mode",RTSYM_CAST(bbCameraFogMode));
+	rtSym( "CameraProject%camera#x#y#z",RTSYM_CAST(bbCameraProject));
+	rtSym( "#ProjectedX",RTSYM_CAST(bbProjectedX));
+	rtSym( "#ProjectedY",RTSYM_CAST(bbProjectedY));
+	rtSym( "#ProjectedZ",RTSYM_CAST(bbProjectedZ));
 
-	rtSym( "%EntityInView%entity%camera",bbEntityInView );
-	rtSym( "%EntityVisible%src_entity%dest_entity",bbEntityVisible );
+	rtSym( "%EntityInView%entity%camera",RTSYM_CAST(bbEntityInView));
+	rtSym( "%EntityVisible%src_entity%dest_entity",RTSYM_CAST(bbEntityVisible));
 
-	rtSym( "%EntityPick%entity#range",bbEntityPick );
-	rtSym( "%LinePick#x#y#z#dx#dy#dz#radius=0",bbLinePick );
-	rtSym( "%CameraPick%camera#viewport_x#viewport_y",bbCameraPick );
+	rtSym( "%EntityPick%entity#range",RTSYM_CAST(bbEntityPick));
+	rtSym( "%LinePick#x#y#z#dx#dy#dz#radius=0",RTSYM_CAST(bbLinePick));
+	rtSym( "%CameraPick%camera#viewport_x#viewport_y",RTSYM_CAST(bbCameraPick));
 
-	rtSym( "#PickedX",bbPickedX );
-	rtSym( "#PickedY",bbPickedY );
-	rtSym( "#PickedZ",bbPickedZ );
-	rtSym( "#PickedNX",bbPickedNX );
-	rtSym( "#PickedNY",bbPickedNY );
-	rtSym( "#PickedNZ",bbPickedNZ );
-	rtSym( "#PickedTime",bbPickedTime );
-	rtSym( "%PickedEntity",bbPickedEntity );
-	rtSym( "%PickedSurface",bbPickedSurface );
-	rtSym( "%PickedTriangle",bbPickedTriangle );
+	rtSym( "#PickedX",RTSYM_CAST(bbPickedX));
+	rtSym( "#PickedY",RTSYM_CAST(bbPickedY));
+	rtSym( "#PickedZ",RTSYM_CAST(bbPickedZ));
+	rtSym( "#PickedNX",RTSYM_CAST(bbPickedNX));
+	rtSym( "#PickedNY",RTSYM_CAST(bbPickedNY));
+	rtSym( "#PickedNZ",RTSYM_CAST(bbPickedNZ));
+	rtSym( "#PickedTime",RTSYM_CAST(bbPickedTime));
+	rtSym( "%PickedEntity",RTSYM_CAST(bbPickedEntity));
+	rtSym( "%PickedSurface",RTSYM_CAST(bbPickedSurface));
+	rtSym( "%PickedTriangle",RTSYM_CAST(bbPickedTriangle));
 
-	rtSym( "%CreateLight%type=1%parent=0",bbCreateLight );
-	rtSym( "LightColor%light#red#green#blue",bbLightColor );
-	rtSym( "LightRange%light#range",bbLightRange );
-	rtSym( "LightConeAngles%light#inner_angle#outer_angle",bbLightConeAngles );
+	rtSym( "%CreateLight%type=1%parent=0",RTSYM_CAST(bbCreateLight));
+	rtSym( "LightColor%light#red#green#blue",RTSYM_CAST(bbLightColor));
+	rtSym( "LightRange%light#range",RTSYM_CAST(bbLightRange));
+	rtSym( "LightConeAngles%light#inner_angle#outer_angle",RTSYM_CAST(bbLightConeAngles));
 
-	rtSym( "%CreatePivot%parent=0",bbCreatePivot );
+	rtSym( "%CreatePivot%parent=0",RTSYM_CAST(bbCreatePivot));
 
-	rtSym( "%CreateSprite%parent=0",bbCreateSprite );
-	rtSym( "%LoadSprite$file%texture_flags=1%parent=0",bbLoadSprite );
-	rtSym( "RotateSprite%sprite#angle",bbRotateSprite );
-	rtSym( "ScaleSprite%sprite#x_scale#y_scale",bbScaleSprite );
-	rtSym( "HandleSprite%sprite#x_handle#y_handle",bbHandleSprite );
-	rtSym( "SpriteViewMode%sprite%view_mode",bbSpriteViewMode );
+	rtSym( "%CreateSprite%parent=0",RTSYM_CAST(bbCreateSprite));
+	rtSym( "%LoadSprite$file%texture_flags=1%parent=0",RTSYM_CAST(bbLoadSprite));
+	rtSym( "RotateSprite%sprite#angle",RTSYM_CAST(bbRotateSprite));
+	rtSym( "ScaleSprite%sprite#x_scale#y_scale",RTSYM_CAST(bbScaleSprite));
+	rtSym( "HandleSprite%sprite#x_handle#y_handle",RTSYM_CAST(bbHandleSprite));
+	rtSym( "SpriteViewMode%sprite%view_mode",RTSYM_CAST(bbSpriteViewMode));
 
-	rtSym( "%LoadMD2$file%parent=0",bbLoadMD2 );
-	rtSym( "AnimateMD2%md2%mode=1#speed=1%first_frame=0%last_frame=9999#transition=0",bbAnimateMD2 );
-	rtSym( "#MD2AnimTime%md2",bbMD2AnimTime );
-	rtSym( "%MD2AnimLength%md2",bbMD2AnimLength );
-	rtSym( "%MD2Animating%md2",bbMD2Animating );
+	rtSym( "%LoadMD2$file%parent=0",RTSYM_CAST(bbLoadMD2));
+	rtSym( "AnimateMD2%md2%mode=1#speed=1%first_frame=0%last_frame=9999#transition=0",RTSYM_CAST(bbAnimateMD2));
+	rtSym( "#MD2AnimTime%md2",RTSYM_CAST(bbMD2AnimTime));
+	rtSym( "%MD2AnimLength%md2",RTSYM_CAST(bbMD2AnimLength));
+	rtSym( "%MD2Animating%md2",RTSYM_CAST(bbMD2Animating));
 
-	rtSym( "%LoadBSP$file#gamma_adj=0%parent=0",bbLoadBSP );
-	rtSym( "BSPLighting%bsp%use_lightmaps",bbBSPLighting );
-	rtSym( "BSPAmbientLight%bsp#red#green#blue",bbBSPAmbientLight );
+	rtSym( "%LoadBSP$file#gamma_adj=0%parent=0",RTSYM_CAST(bbLoadBSP));
+	rtSym( "BSPLighting%bsp%use_lightmaps",RTSYM_CAST(bbBSPLighting));
+	rtSym( "BSPAmbientLight%bsp#red#green#blue",RTSYM_CAST(bbBSPAmbientLight));
 
-	rtSym( "%CreateMirror%parent=0",bbCreateMirror );
+	rtSym( "%CreateMirror%parent=0",RTSYM_CAST(bbCreateMirror));
 
-	rtSym( "%CreatePlane%segments=1%parent=0",bbCreatePlane );
+	rtSym( "%CreatePlane%segments=1%parent=0",RTSYM_CAST(bbCreatePlane));
 
-	rtSym( "%CreateTerrain%grid_size%parent=0",bbCreateTerrain );
-	rtSym( "%LoadTerrain$heightmap_file%parent=0",bbLoadTerrain );
-	rtSym( "TerrainDetail%terrain%detail_level%morph=0",bbTerrainDetail );
-	rtSym( "TerrainShading%terrain%enable",bbTerrainShading );
-	rtSym( "#TerrainX%terrain#world_x#world_y#world_z",bbTerrainX );
-	rtSym( "#TerrainY%terrain#world_x#world_y#world_z",bbTerrainY );
-	rtSym( "#TerrainZ%terrain#world_x#world_y#world_z",bbTerrainZ );
-	rtSym( "%TerrainSize%terrain",bbTerrainSize );
-	rtSym( "#TerrainHeight%terrain%terrain_x%terrain_z",bbTerrainHeight );
-	rtSym( "ModifyTerrain%terrain%terrain_x%terrain_z#height%realtime=0",bbModifyTerrain );
+	rtSym( "%CreateTerrain%grid_size%parent=0",RTSYM_CAST(bbCreateTerrain));
+	rtSym( "%LoadTerrain$heightmap_file%parent=0",RTSYM_CAST(bbLoadTerrain));
+	rtSym( "TerrainDetail%terrain%detail_level%morph=0",RTSYM_CAST(bbTerrainDetail));
+	rtSym( "TerrainShading%terrain%enable",RTSYM_CAST(bbTerrainShading));
+	rtSym( "#TerrainX%terrain#world_x#world_y#world_z",RTSYM_CAST(bbTerrainX));
+	rtSym( "#TerrainY%terrain#world_x#world_y#world_z",RTSYM_CAST(bbTerrainY));
+	rtSym( "#TerrainZ%terrain#world_x#world_y#world_z",RTSYM_CAST(bbTerrainZ));
+	rtSym( "%TerrainSize%terrain",RTSYM_CAST(bbTerrainSize));
+	rtSym( "#TerrainHeight%terrain%terrain_x%terrain_z",RTSYM_CAST(bbTerrainHeight));
+	rtSym( "ModifyTerrain%terrain%terrain_x%terrain_z#height%realtime=0",RTSYM_CAST(bbModifyTerrain));
 
-	rtSym( "%CreateListener%parent#rolloff_factor=1#doppler_scale=1#distance_scale=1",bbCreateListener );
-	rtSym( "%EmitSound%sound%entity",bbEmitSound );
+	rtSym( "%CreateListener%parent#rolloff_factor=1#doppler_scale=1#distance_scale=1",RTSYM_CAST(bbCreateListener));
+	rtSym( "%EmitSound%sound%entity",RTSYM_CAST(bbEmitSound));
 
-	rtSym( "%CopyEntity%entity%parent=0",bbCopyEntity );
+	rtSym( "%CopyEntity%entity%parent=0",RTSYM_CAST(bbCopyEntity));
 
-	rtSym( "#EntityX%entity%global=0",bbEntityX );
-	rtSym( "#EntityY%entity%global=0",bbEntityY );
-	rtSym( "#EntityZ%entity%global=0",bbEntityZ );
-	rtSym( "#EntityPitch%entity%global=0",bbEntityPitch );
-	rtSym( "#EntityYaw%entity%global=0",bbEntityYaw );
-	rtSym( "#EntityRoll%entity%global=0",bbEntityRoll );
-	rtSym( "#GetMatElement%entity%row%column",bbGetMatElement );
-	rtSym( "TFormPoint#x#y#z%source_entity%dest_entity",bbTFormPoint );
-	rtSym( "TFormVector#x#y#z%source_entity%dest_entity",bbTFormVector );
-	rtSym( "TFormNormal#x#y#z%source_entity%dest_entity",bbTFormNormal );
-	rtSym( "#TFormedX",bbTFormedX );
-	rtSym( "#TFormedY",bbTFormedY );
-	rtSym( "#TFormedZ",bbTFormedZ );
-	rtSym( "#VectorYaw#x#y#z",bbVectorYaw );
-	rtSym( "#VectorPitch#x#y#z",bbVectorPitch );
-	rtSym( "#DeltaPitch%src_entity%dest_entity",bbDeltaPitch );
-	rtSym( "#DeltaYaw%src_entity%dest_entity",bbDeltaYaw );
+	rtSym( "#EntityX%entity%global=0",RTSYM_CAST(bbEntityX));
+	rtSym( "#EntityY%entity%global=0",RTSYM_CAST(bbEntityY));
+	rtSym( "#EntityZ%entity%global=0",RTSYM_CAST(bbEntityZ));
+	rtSym( "#EntityPitch%entity%global=0",RTSYM_CAST(bbEntityPitch));
+	rtSym( "#EntityYaw%entity%global=0",RTSYM_CAST(bbEntityYaw));
+	rtSym( "#EntityRoll%entity%global=0",RTSYM_CAST(bbEntityRoll));
+	rtSym( "#GetMatElement%entity%row%column",RTSYM_CAST(bbGetMatElement));
+	rtSym( "TFormPoint#x#y#z%source_entity%dest_entity",RTSYM_CAST(bbTFormPoint));
+	rtSym( "TFormVector#x#y#z%source_entity%dest_entity",RTSYM_CAST(bbTFormVector));
+	rtSym( "TFormNormal#x#y#z%source_entity%dest_entity",RTSYM_CAST(bbTFormNormal));
+	rtSym( "#TFormedX",RTSYM_CAST(bbTFormedX));
+	rtSym( "#TFormedY",RTSYM_CAST(bbTFormedY));
+	rtSym( "#TFormedZ",RTSYM_CAST(bbTFormedZ));
+	rtSym( "#VectorYaw#x#y#z",RTSYM_CAST(bbVectorYaw));
+	rtSym( "#VectorPitch#x#y#z",RTSYM_CAST(bbVectorPitch));
+	rtSym( "#DeltaPitch%src_entity%dest_entity",RTSYM_CAST(bbDeltaPitch));
+	rtSym( "#DeltaYaw%src_entity%dest_entity",RTSYM_CAST(bbDeltaYaw));
 
-	rtSym( "ResetEntity%entity",bbResetEntity );
-	rtSym( "EntityType%entity%collision_type%recursive=0",bbEntityType );
-	rtSym( "EntityPickMode%entity%pick_geometry%obscurer=1",bbEntityPickMode );
-	rtSym( "%GetParent%entity",bbGetParent );
-	rtSym( "%GetEntityType%entity",bbGetEntityType );
-	rtSym( "EntityRadius%entity#x_radius#y_radius=0",bbEntityRadius );
-	rtSym( "EntityBox%entity#x#y#z#width#height#depth",bbEntityBox );
-	rtSym( "#EntityDistance%source_entity%destination_entity",bbEntityDistance );
-	rtSym( "%EntityCollided%entity%type",bbEntityCollided );
+	rtSym( "ResetEntity%entity",RTSYM_CAST(bbResetEntity));
+	rtSym( "EntityType%entity%collision_type%recursive=0",RTSYM_CAST(bbEntityType));
+	rtSym( "EntityPickMode%entity%pick_geometry%obscurer=1",RTSYM_CAST(bbEntityPickMode));
+	rtSym( "%GetParent%entity",RTSYM_CAST(bbGetParent));
+	rtSym( "%GetEntityType%entity",RTSYM_CAST(bbGetEntityType));
+	rtSym( "EntityRadius%entity#x_radius#y_radius=0",RTSYM_CAST(bbEntityRadius));
+	rtSym( "EntityBox%entity#x#y#z#width#height#depth",RTSYM_CAST(bbEntityBox));
+	rtSym( "#EntityDistance%source_entity%destination_entity",RTSYM_CAST(bbEntityDistance));
+	rtSym( "%EntityCollided%entity%type",RTSYM_CAST(bbEntityCollided));
 
-	rtSym( "%CountCollisions%entity",bbCountCollisions );
-	rtSym( "#CollisionX%entity%collision_index",bbCollisionX );
-	rtSym( "#CollisionY%entity%collision_index",bbCollisionY );
-	rtSym( "#CollisionZ%entity%collision_index",bbCollisionZ );
-	rtSym( "#CollisionNX%entity%collision_index",bbCollisionNX );
-	rtSym( "#CollisionNY%entity%collision_index",bbCollisionNY );
-	rtSym( "#CollisionNZ%entity%collision_index",bbCollisionNZ );
-	rtSym( "#CollisionTime%entity%collision_index",bbCollisionTime );
-	rtSym( "%CollisionEntity%entity%collision_index",bbCollisionEntity );
-	rtSym( "%CollisionSurface%entity%collision_index",bbCollisionSurface );
-	rtSym( "%CollisionTriangle%entity%collision_index",bbCollisionTriangle );
+	rtSym( "%CountCollisions%entity",RTSYM_CAST(bbCountCollisions));
+	rtSym( "#CollisionX%entity%collision_index",RTSYM_CAST(bbCollisionX));
+	rtSym( "#CollisionY%entity%collision_index",RTSYM_CAST(bbCollisionY));
+	rtSym( "#CollisionZ%entity%collision_index",RTSYM_CAST(bbCollisionZ));
+	rtSym( "#CollisionNX%entity%collision_index",RTSYM_CAST(bbCollisionNX));
+	rtSym( "#CollisionNY%entity%collision_index",RTSYM_CAST(bbCollisionNY));
+	rtSym( "#CollisionNZ%entity%collision_index",RTSYM_CAST(bbCollisionNZ));
+	rtSym( "#CollisionTime%entity%collision_index",RTSYM_CAST(bbCollisionTime));
+	rtSym( "%CollisionEntity%entity%collision_index",RTSYM_CAST(bbCollisionEntity));
+	rtSym( "%CollisionSurface%entity%collision_index",RTSYM_CAST(bbCollisionSurface));
+	rtSym( "%CollisionTriangle%entity%collision_index",RTSYM_CAST(bbCollisionTriangle));
 
-	rtSym( "MoveEntity%entity#x#y#z",bbMoveEntity );
-	rtSym( "TurnEntity%entity#pitch#yaw#roll%global=0",bbTurnEntity );
-	rtSym( "TranslateEntity%entity#x#y#z%global=0",bbTranslateEntity );
-	rtSym( "PositionEntity%entity#x#y#z%global=0",bbPositionEntity );
-	rtSym( "ScaleEntity%entity#x_scale#y_scale#z_scale%global=0",bbScaleEntity );
-	rtSym( "RotateEntity%entity#pitch#yaw#roll%global=0",bbRotateEntity );
-	rtSym( "PointEntity%entity%target#roll=0",bbPointEntity );
-	rtSym( "AlignToVector%entity#vector_x#vector_y#vector_z%axis#rate=1",bbAlignToVector );
-	rtSym( "SetAnimTime%entity#time%anim_seq=0",bbSetAnimTime );
-	rtSym( "Animate%entity%mode=1#speed=1%sequence=0#transition=0",bbAnimate );
-	rtSym( "SetAnimKey%entity%frame%pos_key=1%rot_key=1%scale_key=1",bbSetAnimKey );
-	rtSym( "%AddAnimSeq%entity%length",bbAddAnimSeq );
-	rtSym( "%ExtractAnimSeq%entity%first_frame%last_frame%anim_seq=0",bbExtractAnimSeq );
-	rtSym( "%AnimSeq%entity",bbAnimSeq );
-	rtSym( "#AnimTime%entity",bbAnimTime );
-	rtSym( "%AnimLength%entity",bbAnimLength );
-	rtSym( "%Animating%entity",bbAnimating );
+	rtSym( "MoveEntity%entity#x#y#z",RTSYM_CAST(bbMoveEntity));
+	rtSym( "TurnEntity%entity#pitch#yaw#roll%global=0",RTSYM_CAST(bbTurnEntity));
+	rtSym( "TranslateEntity%entity#x#y#z%global=0",RTSYM_CAST(bbTranslateEntity));
+	rtSym( "PositionEntity%entity#x#y#z%global=0",RTSYM_CAST(bbPositionEntity));
+	rtSym( "ScaleEntity%entity#x_scale#y_scale#z_scale%global=0",RTSYM_CAST(bbScaleEntity));
+	rtSym( "RotateEntity%entity#pitch#yaw#roll%global=0",RTSYM_CAST(bbRotateEntity));
+	rtSym( "PointEntity%entity%target#roll=0",RTSYM_CAST(bbPointEntity));
+	rtSym( "AlignToVector%entity#vector_x#vector_y#vector_z%axis#rate=1",RTSYM_CAST(bbAlignToVector));
+	rtSym( "SetAnimTime%entity#time%anim_seq=0",RTSYM_CAST(bbSetAnimTime));
+	rtSym( "Animate%entity%mode=1#speed=1%sequence=0#transition=0",RTSYM_CAST(bbAnimate));
+	rtSym( "SetAnimKey%entity%frame%pos_key=1%rot_key=1%scale_key=1",RTSYM_CAST(bbSetAnimKey));
+	rtSym( "%AddAnimSeq%entity%length",RTSYM_CAST(bbAddAnimSeq));
+	rtSym( "%ExtractAnimSeq%entity%first_frame%last_frame%anim_seq=0",RTSYM_CAST(bbExtractAnimSeq));
+	rtSym( "%AnimSeq%entity",RTSYM_CAST(bbAnimSeq));
+	rtSym( "#AnimTime%entity",RTSYM_CAST(bbAnimTime));
+	rtSym( "%AnimLength%entity",RTSYM_CAST(bbAnimLength));
+	rtSym( "%Animating%entity",RTSYM_CAST(bbAnimating));
 
-	rtSym( "EntityParent%entity%parent%global=1",bbEntityParent );
-	rtSym( "%CountChildren%entity",bbCountChildren );
-	rtSym( "%GetChild%entity%index",bbGetChild );
-	rtSym( "%FindChild%entity$name",bbFindChild );
+	rtSym( "EntityParent%entity%parent%global=1",RTSYM_CAST(bbEntityParent));
+	rtSym( "%CountChildren%entity",RTSYM_CAST(bbCountChildren));
+	rtSym( "%GetChild%entity%index",RTSYM_CAST(bbGetChild));
+	rtSym( "%FindChild%entity$name",RTSYM_CAST(bbFindChild));
 
-	rtSym( "PaintEntity%entity%brush",bbPaintEntity );
-	rtSym( "EntityColor%entity#red#green#blue",bbEntityColor );
-	rtSym( "EntityAlpha%entity#alpha",bbEntityAlpha );
-	rtSym( "EntityShininess%entity#shininess",bbEntityShininess );
-	rtSym( "EntityTexture%entity%texture%frame=0%index=0",bbEntityTexture );
-	rtSym( "EntityBlend%entity%blend",bbEntityBlend );
-	rtSym( "EntityFX%entity%fx",bbEntityFX );
-	rtSym( "EntityAutoFade%entity#near#far",bbEntityAutoFade );
-	rtSym( "EntityOrder%entity%order",bbEntityOrder );
-	rtSym( "HideEntity%entity",bbHideEntity );
-	rtSym( "ShowEntity%entity",bbShowEntity );
-	rtSym( "FreeEntity%entity",bbFreeEntity );
+	rtSym( "PaintEntity%entity%brush",RTSYM_CAST(bbPaintEntity));
+	rtSym( "EntityColor%entity#red#green#blue",RTSYM_CAST(bbEntityColor));
+	rtSym( "EntityAlpha%entity#alpha",RTSYM_CAST(bbEntityAlpha));
+	rtSym( "EntityShininess%entity#shininess",RTSYM_CAST(bbEntityShininess));
+	rtSym( "EntityTexture%entity%texture%frame=0%index=0",RTSYM_CAST(bbEntityTexture));
+	rtSym( "EntityBlend%entity%blend",RTSYM_CAST(bbEntityBlend));
+	rtSym( "EntityFX%entity%fx",RTSYM_CAST(bbEntityFX));
+	rtSym( "EntityAutoFade%entity#near#far",RTSYM_CAST(bbEntityAutoFade));
+	rtSym( "EntityOrder%entity%order",RTSYM_CAST(bbEntityOrder));
+	rtSym( "HideEntity%entity",RTSYM_CAST(bbHideEntity));
+	rtSym( "ShowEntity%entity",RTSYM_CAST(bbShowEntity));
+	rtSym( "FreeEntity%entity",RTSYM_CAST(bbFreeEntity));
 
-	rtSym( "NameEntity%entity$name",bbNameEntity );
-	rtSym( "$EntityName%entity",bbEntityName );
-	rtSym( "$EntityClass%entity",bbEntityClass );
+	rtSym( "NameEntity%entity$name",RTSYM_CAST(bbNameEntity));
+	rtSym( "$EntityName%entity",RTSYM_CAST(bbEntityName));
+	rtSym( "$EntityClass%entity",RTSYM_CAST(bbEntityClass));
 }
