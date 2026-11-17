@@ -1,6 +1,11 @@
 
 #include "std.h"
 #include "surface.h"
+
+#ifndef _WIN32
+#include "../bbruntime/bb_handle.h"  // g_handle_table: forget(this) on delete
+#endif
+
 #include "../gxruntime/gxgraphics.h"
 
 extern gxGraphics *gx_graphics;
@@ -16,6 +21,9 @@ mesh(0),mesh_vs(0),mesh_ts(0),valid_vs(0),valid_ts(0),mon(m){
 }
 
 Surface::~Surface(){
+#ifndef _WIN32
+	g_handle_table.forget(this);  // freed slot: stale handle -> null (debug) / silent (release)
+#endif
 	if( mesh ) gx_graphics->freeMesh( mesh );
 }
 

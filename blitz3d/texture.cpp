@@ -4,6 +4,10 @@
 #include "texture.h"
 #include "cachedtexture.h"
 
+#ifndef _WIN32
+#include "../bbruntime/bb_handle.h"  // g_handle_table: forget(this) on delete
+#endif
+
 #include "../gxruntime/gxgraphics.h"
 #include "../gxruntime/gxscene.h"
 
@@ -101,6 +105,9 @@ rep(t.rep){
 }
 
 Texture::~Texture(){
+#ifndef _WIN32
+	g_handle_table.forget(this);  // freed slot: stale handle -> null (debug) / silent (release)
+#endif
 	if( rep && !--rep->ref_cnt ) delete rep;
 }
 

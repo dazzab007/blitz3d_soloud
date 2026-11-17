@@ -42,3 +42,4 @@
 - bbblitz3d.cpp: loader_x include/instance/dispatch guarded #ifdef _WIN32 — minidx9/DXFile is Windows-only; .x loading on macOS deferred to Prompt 5 portable parser. On macOS loadEntity() returns 0 for ".x" (same as unknown extension).
 - a2: blitz3d lib compiles on macOS (babf964) — fwd decls + const void* nested-type accessors + itoa fix
 - a2: blitz3d lib compiles on macOS (babf964) — fwd decls + const void* nested-type accessors + itoa fix
+- c: bbPickedSurface/bbCollisionSurface return (Surface*)collision.surface — Collision::surface is void*, so a C-style cast is needed for the implicit pointer→bbH<Surface> conversion; on Windows the cast is identity (void*→Surface*→bbHPtr<Surface>=Surface*)

@@ -1,6 +1,11 @@
 
 #include "std.h"
 #include "cachedtexture.h"
+
+#ifndef _WIN32
+#include "../bbruntime/bb_handle.h"  // g_handle_table: forget frame canvases on delete
+#endif
+
 #include "../gxruntime/gxgraphics.h"
 
 int active_texs;
@@ -90,7 +95,12 @@ struct CachedTexture::Rep{
 
 	~Rep(){
 		--active_texs;
-		for( int k=0;k<frames.size();++k ) gx_graphics->freeCanvas( frames[k] );
+		for( int k=0;k<frames.size();++k ){
+#ifndef _WIN32
+			g_handle_table.forget( frames[k] );  // freed slot: stale handle -> null (debug) / silent (release)
+#endif
+			gx_graphics->freeCanvas( frames[k] );
+		}
 	}
 };
 

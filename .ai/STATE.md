@@ -36,9 +36,16 @@
   - Test infrastructure: full gxScene/gxLight/gxMesh/gxGraphics-scene-method stubs; blitz3d+stdutil linked into bbruntime_core.
   - test_bbblitz3d: 17 checks, 0 failed. All 7 Mac suites pass.
 
+## Done (c)
+- 3D commit (c): Texture/Brush/Surface families → BB_HANDLE; bbPickedSurface/bbCollisionSurface void*→BB_HANDLE(Surface);
+  bbTextureBuffer→BB_HANDLE(gxCanvas); tH<T>() template added.
+  - forget(this) in Texture::~Texture, Brush::~Brush, Surface::~Surface; forget(frames[k]) in CachedTexture::Rep::~Rep.
+  - Syntax check (-DBB_BLITZ3D_ENABLED=1): 0 errors. Build: 0 errors.
+  - All 7 Mac suites pass: 407+26+28+11+27+19+17.
+
 ## Next
-- Commit b2 + push + Windows CI green
-- Commit forget(this) in Entity::~Entity (task 4) + push + Windows CI green
+- Push commit (c) + Windows CI green (gh run watch --exit-status)
+- 3D commit (d): handle_table blitz3d tests (tests/test_bbblitz3d.cpp extension)
 
 ## Blockers
 - None

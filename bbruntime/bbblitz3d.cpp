@@ -66,6 +66,9 @@ static map<string,Transform> loader_mat_map;
 static inline void debug3d(){
 	if( debug && !gx_scene ) RTEX( "3D Graphics mode not set" );
 }
+// Texture/Brush/Surface handles: identity on Windows (BB_HANDLE is the pointer),
+// table lookup on macOS. Static cast keeps an unrelated type a compile error.
+template <typename T> inline T *tH( BB_HANDLE(T) h ){ return static_cast<T*>(h); }
 #ifdef _WIN32
 // Windows: BB_HANDLE(Entity) is Entity*, so eH is an identity cast.
 template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return static_cast<T*>(h); }
@@ -75,6 +78,7 @@ template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return static_cast<T*
 // a silent reinterpret_cast.
 template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return static_cast<T*>(static_cast<Entity*>(h)); }
 #endif
+
 static inline void debugTexture( Texture *t ){
 	if( debug && !texture_set.count( t ) ) RTEX( "Texture does not exist" );
 }
@@ -371,7 +375,7 @@ float  bbStats3D( int n ){
 
 //Note: modify canvas->backup() to NOT release backup image!
 //
-Texture *  bbLoadTexture( BBStr *file,int flags ){
+BB_HANDLE(Texture)  bbLoadTexture( BBStr *file,int flags ){
 	debug3d();
 	Texture *t=d_new Texture( *file,flags );delete file;
 	if( !t->getCanvas(0) ){ delete t;return 0; }
@@ -379,7 +383,7 @@ Texture *  bbLoadTexture( BBStr *file,int flags ){
 	return t;
 }
 
-Texture *  bbLoadAnimTexture( BBStr *file,int flags,int w,int h,int first,int cnt ){
+BB_HANDLE(Texture)  bbLoadAnimTexture( BBStr *file,int flags,int w,int h,int first,int cnt ){
 	debug3d();
 	Texture *t=d_new Texture( *file,flags,w,h,first,cnt );
 	delete file;
@@ -391,7 +395,7 @@ Texture *  bbLoadAnimTexture( BBStr *file,int flags,int w,int h,int first,int cn
 	return t;
 }
 
-Texture *  bbCreateTexture( int w,int h,int flags,int frames ){
+BB_HANDLE(Texture)  bbCreateTexture( int w,int h,int flags,int frames ){
 	if( debug ){
 		debug3d();
 		if( frames<=0 ){
@@ -403,69 +407,81 @@ Texture *  bbCreateTexture( int w,int h,int flags,int frames ){
 	return t;
 }
 
-void  bbFreeTexture( Texture *t ){
+void  bbFreeTexture( BB_HANDLE(Texture) t_h ){
+	Texture *t=tH<Texture>( t_h );
 	if( !t ) return;
 	debugTexture(t);
 	if( texture_set.erase( t ) ) delete t;
 }
 
-void  bbTextureBlend( Texture *t,int blend ){
+void  bbTextureBlend( BB_HANDLE(Texture) t_h,int blend ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	t->setBlend( blend );
 }
 
-void  bbTextureCoords( Texture *t,int flags ){
+void  bbTextureCoords( BB_HANDLE(Texture) t_h,int flags ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	t->setFlags( flags );
 }
 
-void  bbScaleTexture( Texture *t,float u_scale,float v_scale ){
+void  bbScaleTexture( BB_HANDLE(Texture) t_h,float u_scale,float v_scale ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	t->setScale( 1/u_scale,1/v_scale );
 }
 
-void  bbRotateTexture( Texture *t,float angle ){
+void  bbRotateTexture( BB_HANDLE(Texture) t_h,float angle ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	t->setRotation( -angle*dtor );
 }
 
-void  bbPositionTexture( Texture *t,float u_pos,float v_pos ){
+void  bbPositionTexture( BB_HANDLE(Texture) t_h,float u_pos,float v_pos ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	t->setPosition( -u_pos,-v_pos );
 }
 
-int  bbTextureWidth( Texture *t ){
+int  bbTextureWidth( BB_HANDLE(Texture) t_h ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	return t->getCanvas(0)->getWidth();
 }
 
-int  bbTextureHeight( Texture *t ){
+int  bbTextureHeight( BB_HANDLE(Texture) t_h ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	return t->getCanvas(0)->getHeight();
 }
 
-BBStr *bbTextureName( Texture *t ){
+BBStr *bbTextureName( BB_HANDLE(Texture) t_h ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	CachedTexture *c=t->getCachedTexture();
 	return c ? d_new BBStr( c->getName().c_str() ) : d_new BBStr("");
 }
 
-void bbSetCubeFace( Texture *t,int face ){
+void bbSetCubeFace( BB_HANDLE(Texture) t_h,int face ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	if( gxCanvas *c=t->getCanvas( 0 ) ){
 		c->setCubeFace(face);
 	}
 }
 
-void bbSetCubeMode( Texture *t,int mode ){
+void bbSetCubeMode( BB_HANDLE(Texture) t_h,int mode ){
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	if( gxCanvas *c=t->getCanvas( 0 ) ){
 		c->setCubeMode( mode );
 	}
 }
 
-gxCanvas *bbTextureBuffer( Texture *t,int frame ){
+BB_HANDLE(gxCanvas) bbTextureBuffer( BB_HANDLE(Texture) t_h,int frame ){
 	//v1.04
+	Texture *t=tH<Texture>( t_h );
 	debugTexture(t);
 	if( gxCanvas *c=t->getCanvas( frame ) ){
 		if( c->getDepth() ) return c;
@@ -494,7 +510,7 @@ void  bbTextureFilter( BBStr *t,int flags ){
 ////////////////////
 // BRUSH COMMANDS //
 ////////////////////
-Brush *  bbCreateBrush( float r,float g,float b ){
+BB_HANDLE(Brush)  bbCreateBrush( float r,float g,float b ){
 	debug3d();
 	Brush *br=d_new Brush();
 	br->setColor( Vector( r*ctof,g*ctof,b*ctof ) );
@@ -502,7 +518,7 @@ Brush *  bbCreateBrush( float r,float g,float b ){
 	return br;
 }
 
-Brush *  bbLoadBrush( BBStr *file,int flags,float u_scale,float v_scale ){
+BB_HANDLE(Brush)  bbLoadBrush( BBStr *file,int flags,float u_scale,float v_scale ){
 	debug3d();
 	Texture t( *file,flags );
 	delete file;if( !t.getCanvas(0) ) return 0;
@@ -513,46 +529,55 @@ Brush *  bbLoadBrush( BBStr *file,int flags,float u_scale,float v_scale ){
 	return br;
 }
 
-void  bbFreeBrush( Brush *b ){
+void  bbFreeBrush( BB_HANDLE(Brush) b_h ){
+	Brush *b=tH<Brush>( b_h );
 	if( !b ) return;
 	debugBrush(b);
 	if( brush_set.erase( b ) ) delete b;
 }
 
-void  bbBrushColor( Brush *br,float r,float g,float b ){
+void  bbBrushColor( BB_HANDLE(Brush) br_h,float r,float g,float b ){
+	Brush *br=tH<Brush>( br_h );
 	debugBrush(br);
 	br->setColor( Vector( r*ctof,g*ctof,b*ctof ) );
 }
 
-void  bbBrushAlpha( Brush *b,float alpha ){
+void  bbBrushAlpha( BB_HANDLE(Brush) b_h,float alpha ){
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	b->setAlpha( alpha );
 }
 
-void  bbBrushShininess( Brush *b,float n ){
+void  bbBrushShininess( BB_HANDLE(Brush) b_h,float n ){
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	b->setShininess( n );
 }
 
-void  bbBrushTexture( Brush *b,Texture *t,int frame,int index ){
+void  bbBrushTexture( BB_HANDLE(Brush) b_h,BB_HANDLE(Texture) t_h,int frame,int index ){
+	Brush *b=tH<Brush>( b_h );
+	Texture *t=tH<Texture>( t_h );
 	debugBrush(b);
 	debugTexture(t);
 	b->setTexture( index,*t,frame );
 }
 
-Texture *bbGetBrushTexture( Brush *b,int index ){
+BB_HANDLE(Texture) bbGetBrushTexture( BB_HANDLE(Brush) b_h,int index ){
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	Texture *tex=d_new Texture(b->getTexture(index));
 	texture_set.insert( tex );
 	return tex;
 }
 
-void  bbBrushBlend( Brush *b,int blend ){
+void  bbBrushBlend( BB_HANDLE(Brush) b_h,int blend ){
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	b->setBlend( blend );
 }
 
-void  bbBrushFX( Brush *b,int fx ){
+void  bbBrushFX( BB_HANDLE(Brush) b_h,int fx ){
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	b->setFX( fx );
 }
@@ -681,8 +706,9 @@ void  bbFlipMesh( BB_HANDLE(Entity) m_h ){
 	m->flipTriangles();
 }
 
-void  bbPaintMesh( BB_HANDLE(Entity) m_h,Brush *b ){
+void  bbPaintMesh( BB_HANDLE(Entity) m_h,BB_HANDLE(Brush) b_h ){
 	MeshModel *m=eH<MeshModel> ( m_h );
+	Brush *b=tH<Brush>( b_h );
 	if( debug ){ debugMesh(m);debugBrush(b); }
 	m->paint( *b );
 }
@@ -741,7 +767,7 @@ int  bbCountSurfaces( BB_HANDLE(Entity) m_h ){
 	return m->getSurfaces().size();
 }
 
-Surface *  bbGetSurface( BB_HANDLE(Entity) m_h,int index ){
+BB_HANDLE(Surface)  bbGetSurface( BB_HANDLE(Entity) m_h,int index ){
 	MeshModel *m=eH<MeshModel> ( m_h );
 	if( debug ){
 		debugMesh(m);
@@ -764,26 +790,29 @@ void bbMeshCullBox( BB_HANDLE(Entity) m_h,float x,float y,float z,float width,fl
 //////////////////////
 // SURFACE COMMANDS //
 //////////////////////
-Surface *  bbFindSurface( BB_HANDLE(Entity) m_h,Brush *b ){
+BB_HANDLE(Surface)  bbFindSurface( BB_HANDLE(Entity) m_h,BB_HANDLE(Brush) b_h ){
 	MeshModel *m=eH<MeshModel> ( m_h );
+	Brush *b=tH<Brush>( b_h );
 	if( debug ){ debugMesh(m);debugBrush(b); }
 	return m->findSurface(*b);
 }
 
-Surface *  bbCreateSurface( BB_HANDLE(Entity) m_h,Brush *b ){
+BB_HANDLE(Surface)  bbCreateSurface( BB_HANDLE(Entity) m_h,BB_HANDLE(Brush) b_h ){
 	MeshModel *m=eH<MeshModel> ( m_h );
+	Brush *b=tH<Brush>( b_h );
 	if( debug ){ debugMesh(m);if( b ) debugBrush(b); }
 	Surface *s=b ? m->createSurface( *b ) : m->createSurface( Brush() );
 	return s;
 }
 
-Brush *bbGetSurfaceBrush( Surface *s ){
+BB_HANDLE(Brush) bbGetSurfaceBrush( BB_HANDLE(Surface) s_h ){
+	Surface *s=tH<Surface>( s_h );
 	Brush *br=d_new Brush( s->getBrush() );
 	brush_set.insert( br );
 	return br;
 }
 
-Brush *bbGetEntityBrush( BB_HANDLE(Entity) m_h ){
+BB_HANDLE(Brush) bbGetEntityBrush( BB_HANDLE(Entity) m_h ){
 	Model *m=eH<Model> ( m_h );
 	debugModel(m);
 	Brush *br=d_new Brush( m->getBrush() );
@@ -791,16 +820,20 @@ Brush *bbGetEntityBrush( BB_HANDLE(Entity) m_h ){
 	return br;
 }
 
-void  bbClearSurface( Surface *s,int verts,int tris ){
+void  bbClearSurface( BB_HANDLE(Surface) s_h,int verts,int tris ){
+	Surface *s=tH<Surface>( s_h );
 	s->clear( !!verts,!!tris );
 }
 
-void  bbPaintSurface( Surface *s,Brush *b ){
+void  bbPaintSurface( BB_HANDLE(Surface) s_h,BB_HANDLE(Brush) b_h ){
+	Surface *s=tH<Surface>( s_h );
+	Brush *b=tH<Brush>( b_h );
 	debugBrush(b);
 	s->setBrush(*b);
 }
 
-int  bbAddVertex( Surface *s,float x,float y,float z,float tu,float tv,float tw ){
+int  bbAddVertex( BB_HANDLE(Surface) s_h,float x,float y,float z,float tu,float tv,float tw ){
+	Surface *s=tH<Surface>( s_h );
 	Surface::Vertex v;
 	v.coords=Vector(x,y,z);
 	v.color=0xffffffff;
@@ -810,22 +843,26 @@ int  bbAddVertex( Surface *s,float x,float y,float z,float tu,float tv,float tw 
 	return s->numVertices()-1;
 }
 
-int  bbAddTriangle( Surface *s,int v0,int v1,int v2 ){
+int  bbAddTriangle( BB_HANDLE(Surface) s_h,int v0,int v1,int v2 ){
+	Surface *s=tH<Surface>( s_h );
 	Surface::Triangle t;
 	t.verts[0]=v0;t.verts[1]=v1;t.verts[2]=v2;
 	s->addTriangle( t );
 	return s->numTriangles()-1;
 }
 
-void  bbVertexCoords( Surface *s,int n,float x,float y,float z ){
+void  bbVertexCoords( BB_HANDLE(Surface) s_h,int n,float x,float y,float z ){
+	Surface *s=tH<Surface>( s_h );
 	s->setCoords( n,Vector(x,y,z) );
 }
 
-void  bbVertexNormal( Surface *s,int n,float x,float y,float z ){
+void  bbVertexNormal( BB_HANDLE(Surface) s_h,int n,float x,float y,float z ){
+	Surface *s=tH<Surface>( s_h );
 	s->setNormal( n,Vector(x,y,z) );
 }
 
-void  bbVertexColor( Surface *s,int n,float r,float g,float b,float a ){
+void  bbVertexColor( BB_HANDLE(Surface) s_h,int n,float r,float g,float b,float a ){
+	Surface *s=tH<Surface>( s_h );
 	if(r<0)r=0;else if(r>255)r=255;
 	if(g<0)g=0;else if(g>255)g=255;
 	if(b<0)b=0;else if(b>255)b=255;
@@ -833,71 +870,88 @@ void  bbVertexColor( Surface *s,int n,float r,float g,float b,float a ){
 	s->setColor( n,(int(a)<<24)|(int(r)<<16)|(int(g)<<8)|int(b) );
 }
 
-void  bbVertexTexCoords( Surface *s,int n,float u,float v,float w,int set ){
+void  bbVertexTexCoords( BB_HANDLE(Surface) s_h,int n,float u,float v,float w,int set ){
+	Surface *s=tH<Surface>( s_h );
 	s->setTexCoords( n,Vector(u,v,w),set );
 }
 
-int  bbCountVertices( Surface *s ){
+int  bbCountVertices( BB_HANDLE(Surface) s_h ){
+	Surface *s=tH<Surface>( s_h );
 	return s->numVertices();
 }
 
-int  bbCountTriangles( Surface *s ){
+int  bbCountTriangles( BB_HANDLE(Surface) s_h ){
+	Surface *s=tH<Surface>( s_h );
 	return s->numTriangles();
 }
 
-float  bbVertexX( Surface *s,int n ){
+float  bbVertexX( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).coords.x;
 }
-float  bbVertexY( Surface *s,int n ){
+float  bbVertexY( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).coords.y;
 }
-float  bbVertexZ( Surface *s,int n ){
+float  bbVertexZ( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).coords.z;
 }
-float  bbVertexNX( Surface *s,int n ){
+float  bbVertexNX( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).normal.x;
 }
-float  bbVertexNY( Surface *s,int n ){
+float  bbVertexNY( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).normal.y;
 }
-float  bbVertexNZ( Surface *s,int n ){
+float  bbVertexNZ( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).normal.z;
 }
-float  bbVertexRed( Surface *s,int n ){
+float  bbVertexRed( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return (s->getVertex(n).color&0xff0000)>>16;
 }
-float  bbVertexGreen( Surface *s,int n ){
+float  bbVertexGreen( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return (s->getVertex(n).color&0xff00)>>8;
 }
-float  bbVertexBlue( Surface *s,int n ){
+float  bbVertexBlue( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return s->getVertex(n).color&0xff;
 }
-float  bbVertexAlpha( Surface *s,int n ){
+float  bbVertexAlpha( BB_HANDLE(Surface) s_h,int n ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n);
 	return ((s->getVertex(n).color&0xff000000)>>24)/255.0f;
 }
-float  bbVertexU( Surface *s,int n,int t ){
+float  bbVertexU( BB_HANDLE(Surface) s_h,int n,int t ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n,t);
 	return s->getVertex(n).tex_coords[t][0];
 }
-float  bbVertexV( Surface *s,int n,int t ){
+float  bbVertexV( BB_HANDLE(Surface) s_h,int n,int t ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n,t);
 	return s->getVertex(n).tex_coords[t][1];
 }
-float  bbVertexW( Surface *s,int n,int t ){
+float  bbVertexW( BB_HANDLE(Surface) s_h,int n,int t ){
+	Surface *s=tH<Surface>( s_h );
 	debugVertex(s,n,t);
 	return 1;
 }
-int  bbTriangleVertex( Surface *s,int n,int v ){
+int  bbTriangleVertex( BB_HANDLE(Surface) s_h,int n,int v ){
+	Surface *s=tH<Surface>( s_h );
 	return s->getTriangle(n).verts[v];
 }
 
@@ -1120,8 +1174,8 @@ BB_HANDLE(Entity)  bbPickedEntity(){
 	return picked.with;
 }
 
-void * bbPickedSurface(){
-	return picked.collision.surface;
+BB_HANDLE(Surface) bbPickedSurface(){
+	return (Surface*)picked.collision.surface;
 }
 
 int  bbPickedTriangle(){
@@ -1636,8 +1690,9 @@ int  bbAnimating( BB_HANDLE(Entity) o_h ){
 ////////////////////////////////
 // ENTITY SPECIAL FX COMMANDS //
 ////////////////////////////////
-void  bbPaintEntity( BB_HANDLE(Entity) m_h,Brush *b ){
+void  bbPaintEntity( BB_HANDLE(Entity) m_h,BB_HANDLE(Brush) b_h ){
 	Model *m=eH<Model> ( m_h );
+	Brush *b=tH<Brush>( b_h );
 	if( debug ){
 		debugModel(m);
 		debugBrush(b);
@@ -1663,8 +1718,9 @@ void  bbEntityShininess( BB_HANDLE(Entity) m_h,float shininess ){
 	m->setShininess( shininess );
 }
 
-void  bbEntityTexture( BB_HANDLE(Entity) m_h,Texture *t,int frame,int index ){
+void  bbEntityTexture( BB_HANDLE(Entity) m_h,BB_HANDLE(Texture) t_h,int frame,int index ){
 	Model *m=eH<Model> ( m_h );
+	Texture *t=tH<Texture>( t_h );
 	debugModel(m);
 	debugTexture(t);
 	m->setTexture( index,*t,frame );
@@ -1953,10 +2009,10 @@ BB_HANDLE(Entity)  bbCollisionEntity( BB_HANDLE(Entity) o_h,int index ){
 	return o->getCollisions()[index-1]->with;
 }
 
-void *  bbCollisionSurface( BB_HANDLE(Entity) o_h,int index ){
+BB_HANDLE(Surface)  bbCollisionSurface( BB_HANDLE(Entity) o_h,int index ){
 	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
-	return o->getCollisions()[index-1]->collision.surface;
+	return (Surface*)o->getCollisions()[index-1]->collision.surface;
 }
 
 int  bbCollisionTriangle( BB_HANDLE(Entity) o_h,int index ){
