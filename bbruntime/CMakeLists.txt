@@ -96,6 +96,11 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_handle_table)
 	target_link_libraries(test_handle_table bb_handle)
 
+	# Unit tests for the debug env id table (compiler/debugenv.h, non-Windows only).
+	add_executable(test_debugenv ../tests/test_debugenv.cpp ../compiler/debugenv.cpp ../compiler/environ.cpp ../compiler/type.cpp ../compiler/decl.cpp)
+	bb_target_options(test_debugenv)
+	target_link_libraries(test_debugenv stdutil)
+
 	# bbbank integration test: links real bbbank.cpp + stubs for gxruntime.
 	add_executable(test_bbbank ../tests/test_bbbank.cpp ../tests/stubs_gxruntime.cpp)
 	bb_target_options(test_bbbank)

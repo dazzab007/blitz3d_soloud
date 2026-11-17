@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "nodes.h"
+#include "debugenv.h"
 
 //////////////////
 // The program! //
@@ -55,8 +56,7 @@ void ProgNode::translate( Codegen *g,const vector<UserFunc> &usrfuncs ){
 	if( g->debug ){
 		string t=genLabel();
 		g->s_data( "<main program>",t );
-		//TODO(handle-table): sem_env is a pointer; on 64-bit this no longer fits in the 32-bit int.
-		g->code( call( "__bbDebugEnter",local(0),iconst((int)(intptr_t)sem_env),global(t) ) );
+		g->code( call( "__bbDebugEnter",local(0),iconst(debugEnvId(sem_env)),global(t) ) );
 	}
 
 	//no user funcs used!

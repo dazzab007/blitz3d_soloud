@@ -8,6 +8,7 @@ add_library(compiler
 		assem_x86/operand.cpp
 		codegen_x86/codegen_x86.cpp
 		codegen_x86/tile.cpp
+		debugenv.cpp
 		decl.cpp
 		declnode.cpp
 		environ.cpp
@@ -27,6 +28,7 @@ add_library(compiler
 		codegen.h
 		codegen_x86/codegen_x86.h
 		codegen_x86/tile.h
+		debugenv.h
 		decl.h
 		declnode.h
 		environ.h

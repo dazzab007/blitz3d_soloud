@@ -99,10 +99,20 @@ void _bbDebugStmt(int pos, const char* file)
         RTEX(0);
 }
 
+#ifdef _WIN32
 void _bbDebugEnter(void* frame, void* env, const char* func)
 {
     gx_runtime->debugEnter(frame, env, func);
 }
+#else
+// On non-Windows the compiler emits a debug-env id (see compiler/debugenv.h),
+// not a pointer: BASIC ints are 32-bit. The future Mac debugger resolves ids
+// via debugEnvLookup.
+void _bbDebugEnter(void* frame, int env_id, const char* func)
+{
+    gx_runtime->debugEnter(frame, (void*)(intptr_t)env_id, func);
+}
+#endif
 
 void _bbDebugLeave()
 {
