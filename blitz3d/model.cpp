@@ -30,7 +30,7 @@ public:
 		return q_type;
 	}
 	void render(){
-		gx_scene->setRenderState( *static_cast<const gxScene::RenderState*>(brush.getRenderState()) );
+		gx_scene->setRenderState( *brush.getRenderState() );
 		gx_scene->render( mesh,fv,vc,ft,tc );
 	}
 	void *operator new( size_t sz ){

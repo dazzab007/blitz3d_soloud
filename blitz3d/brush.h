@@ -5,6 +5,8 @@
 #include "geom.h"
 #include "texture.h"
 
+#include "../gxruntime/gxscene.h"
+
 class Brush{
 public:
 	Brush();
@@ -28,7 +30,7 @@ public:
 	int getFX()const;
 	Texture getTexture( int index )const;
 
-	const void *getRenderState()const;
+	const gxScene::RenderState *getRenderState()const;
 
 	bool operator<( const Brush &b )const;
 

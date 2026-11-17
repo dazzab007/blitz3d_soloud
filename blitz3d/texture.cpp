@@ -167,7 +167,7 @@ int Texture::getFlags()const{
 	return rep ? rep->tex_flags : 0;
 }
 
-const void *Texture::getMatrix()const{
+const gxScene::Matrix *Texture::getMatrix()const{
 	if( !rep || !rep->mat_used ) return 0;
 	if( !rep->mat_valid ){
 		float c=cos(rep->rot),s=sin(rep->rot);

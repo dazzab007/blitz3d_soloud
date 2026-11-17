@@ -7,6 +7,7 @@
 #include "cachedtexture.h"
 
 #include "../gxruntime/gxcanvas.h"
+#include "../gxruntime/gxscene.h"
 
 class Texture{
 public:
@@ -27,7 +28,7 @@ public:
 
 	int getCanvasFlags()const;
 	gxCanvas *getCanvas( int frame )const;
-	const void *getMatrix()const;
+	const gxScene::Matrix *getMatrix()const;
 	int getBlend()const;
 	int getFlags()const;
 	CachedTexture *getCachedTexture()const;

@@ -196,11 +196,11 @@ Texture Brush::getTexture( int index )const{
 	return rep->texs[index];
 }
 
-const void *Brush::getRenderState()const{
+const gxScene::RenderState *Brush::getRenderState()const{
 	getBlend();
 	for( int k=0;k<rep->max_tex;++k ){
 		gxScene::RenderState::TexState *ts=&rep->rs.tex_states[k];
-		ts->matrix=static_cast<const gxScene::Matrix*>(rep->texs[k].getMatrix());
+		ts->matrix=rep->texs[k].getMatrix();
 		ts->blend=rep->texs[k].getBlend();
 		ts->flags=rep->texs[k].getFlags();
 	}
