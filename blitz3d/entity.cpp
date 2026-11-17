@@ -2,6 +2,10 @@
 #include "std.h"
 #include "entity.h"
 
+#ifndef _WIN32
+#include "../bbruntime/bb_handle.h"  // g_handle_table: forget(this) on delete
+#endif
+
 //#include "stats.h"
 
 Entity *Entity::_orphans,*Entity::_last_orphan;
@@ -57,6 +61,9 @@ invalid( INVALID_LOCALTFORM|INVALID_WORLDTFORM ){
 Entity::~Entity(){
 	while( children() ) delete children();
 	remove();
+#ifndef _WIN32
+	g_handle_table.forget(this);  // freed slot: stale handle -> null (debug) / silent (release)
+#endif
 }
 
 void Entity::invalidateWorld(){
