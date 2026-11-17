@@ -68,10 +68,12 @@ static inline void debug3d(){
 }
 #ifdef _WIN32
 // Windows: BB_HANDLE(Entity) is Entity*, so eH is an identity cast.
-template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return (T*)h; }
+template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return static_cast<T*>(h); }
 #else
 // macOS: BB_HANDLE(Entity) is bbH<Entity>, convert to typed pointer via handle table.
-template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return (T*)(Entity*)h; }
+// The two static_casts make an unrelated/incomplete T a compile error instead of
+// a silent reinterpret_cast.
+template <typename T> inline T *eH( BB_HANDLE(Entity) h ){ return static_cast<T*>(static_cast<Entity*>(h)); }
 #endif
 static inline void debugTexture( Texture *t ){
 	if( debug && !texture_set.count( t ) ) RTEX( "Texture does not exist" );
@@ -558,14 +560,14 @@ void  bbBrushFX( Brush *b,int fx ){
 ///////////////////
 // MESH COMMANDS //
 ///////////////////
-Entity *  bbCreateMesh( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateMesh( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	MeshModel *m=d_new MeshModel();
 	return insertEntity( m,p );
 }
 
-Entity *  bbLoadMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=loadEntity( f->c_str(),MeshLoader::HINT_COLLAPSE );
@@ -577,7 +579,7 @@ Entity *  bbLoadMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
 	return insertEntity( m,p );
 }
 
-Entity *  bbLoadAnimMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadAnimMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=loadEntity( f->c_str(),0 );
@@ -590,35 +592,35 @@ Entity *  bbLoadAnimMesh( BBStr *f,BB_HANDLE(Entity) p_h ){
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCube( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateCube( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Entity *e=MeshUtil::createCube( Brush() );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateSphere( int segs,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateSphere( int segs,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<2 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createSphere( Brush(),segs );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCylinder( int segs,int solid,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateCylinder( int segs,int solid,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<3 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createCylinder( Brush(),segs,!!solid );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCreateCone( int segs,int solid,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateCone( int segs,int solid,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){ debugParent(p);if( segs<3 || segs>100 ) RTEX( "Illegal number of segments" ); }
 	Entity *e=MeshUtil::createCone( Brush(),segs,!!solid );
 	return insertEntity( e,p );
 }
 
-Entity *  bbCopyMesh( BB_HANDLE(Entity) m_h,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCopyMesh( BB_HANDLE(Entity) m_h,BB_HANDLE(Entity) p_h ){
 	MeshModel *p=eH<MeshModel> ( p_h );
 	MeshModel *m=eH<MeshModel> ( m_h );
 	debugMesh(m);
@@ -902,7 +904,7 @@ int  bbTriangleVertex( Surface *s,int n,int v ){
 /////////////////////
 // CAMERA COMMANDS //
 /////////////////////
-Entity *  bbCreateCamera( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateCamera( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	int x,y,w,h;
@@ -1017,7 +1019,7 @@ static Object *doPick( const Line &l,float radius ){
 	return world->traceRay( l,radius,&picked );
 }
 
-Entity *  bbCameraPick( BB_HANDLE(Entity) c_h,float x,float y ){
+BB_HANDLE(Entity)  bbCameraPick( BB_HANDLE(Entity) c_h,float x,float y ){
 	Camera *c=eH<Camera> ( c_h );
 	debugCamera(c);
 
@@ -1042,7 +1044,7 @@ Entity *  bbCameraPick( BB_HANDLE(Entity) c_h,float x,float y ){
 	return doPick( l,0 );
 }
 
-Entity *  bbLinePick( float x,float y,float z,float dx,float dy,float dz,float radius ){
+BB_HANDLE(Entity)  bbLinePick( float x,float y,float z,float dx,float dy,float dz,float radius ){
 	debug3d();
 
 	Line l( Vector( x,y,z ),Vector( dx,dy,dz ) );
@@ -1050,7 +1052,7 @@ Entity *  bbLinePick( float x,float y,float z,float dx,float dy,float dz,float r
 	return doPick( l,radius );
 }
 
-Entity *  bbEntityPick( BB_HANDLE(Entity) src_h,float range ){
+BB_HANDLE(Entity)  bbEntityPick( BB_HANDLE(Entity) src_h,float range ){
 	Entity *src=eH<Entity> ( src_h );
 	debugEntity(src);
 
@@ -1114,7 +1116,7 @@ float  bbPickedTime(){
 	return picked.collision.time;
 }
 
-Object * bbPickedEntity(){
+BB_HANDLE(Entity)  bbPickedEntity(){
 	return picked.with;
 }
 
@@ -1129,7 +1131,7 @@ int  bbPickedTriangle(){
 ////////////////////
 // LIGHT COMMANDS //
 ////////////////////
-Entity *  bbCreateLight( int type,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateLight( int type,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Light *t=d_new Light( type );
@@ -1163,7 +1165,7 @@ void  bbLightConeAngles( BB_HANDLE(Entity) light_h,float inner,float outer ){
 ////////////////////
 // PIVOT COMMANDS //
 ////////////////////
-Entity *  bbCreatePivot( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreatePivot( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Pivot *t=d_new Pivot();
@@ -1173,7 +1175,7 @@ Entity *  bbCreatePivot( BB_HANDLE(Entity) p_h ){
 /////////////////////
 // SPRITE COMMANDS //
 /////////////////////
-Entity *  bbCreateSprite( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateSprite( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Sprite *s=d_new Sprite();
@@ -1181,7 +1183,7 @@ Entity *  bbCreateSprite( BB_HANDLE(Entity) p_h ){
 	return insertEntity( s,p );
 }
 
-Entity *  bbLoadSprite( BBStr *file,int flags,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadSprite( BBStr *file,int flags,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Texture t( *file,flags );
@@ -1224,7 +1226,7 @@ void  bbSpriteViewMode( BB_HANDLE(Entity) s_h,int mode ){
 /////////////////////
 // MIRROR COMMANDS //
 /////////////////////
-Entity *  bbCreateMirror( BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateMirror( BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	Mirror *t=d_new Mirror();
@@ -1234,7 +1236,7 @@ Entity *  bbCreateMirror( BB_HANDLE(Entity) p_h ){
 ////////////////////
 // PLANE COMMANDS //
 ////////////////////
-Entity *  bbCreatePlane( int segs,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreatePlane( int segs,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugParent(p);
@@ -1247,7 +1249,7 @@ Entity *  bbCreatePlane( int segs,BB_HANDLE(Entity) p_h ){
 //////////////////
 // MD2 COMMANDS //
 //////////////////
-Entity *  bbLoadMD2( BBStr *file,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadMD2( BBStr *file,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	MD2Model *t=d_new MD2Model( *file );delete file;
@@ -1282,7 +1284,7 @@ int  bbMD2Animating( BB_HANDLE(Entity) m_h ){
 //////////////////
 // BSP Commands //
 //////////////////
-Entity *  bbLoadBSP( BBStr *file,float gam,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadBSP( BBStr *file,float gam,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	CachedTexture::setPath( filenamepath( *file ) );
@@ -1327,7 +1329,7 @@ static Vector terrainVector( Terrain *t,float x,float y,float z ){
 	return t->getWorldTform() * Vector( v.x,terrainHeight( t,v.x,v.z ),v.z );
 }
 
-Entity *  bbCreateTerrain( int n,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCreateTerrain( int n,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	int shift=0;
@@ -1337,7 +1339,7 @@ Entity *  bbCreateTerrain( int n,BB_HANDLE(Entity) p_h ){
 	return insertEntity( t,p );
 }
 
-Entity *  bbLoadTerrain( BBStr *file,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbLoadTerrain( BBStr *file,BB_HANDLE(Entity) p_h ){
 	Entity *p=eH<Entity> ( p_h );
 	debugParent(p);
 	gxCanvas *c=gx_graphics->loadCanvas( *file,gxCanvas::CANVAS_HIGHCOLOR );
@@ -1413,7 +1415,7 @@ void  bbModifyTerrain( BB_HANDLE(Entity) t_h,int x,int z,float h,int realtime ){
 ////////////////////
 // AUDIO COMMANDS //
 ////////////////////
-Entity *  bbCreateListener( BB_HANDLE(Entity) p_h,float roll,float dopp,float dist ){
+BB_HANDLE(Entity)  bbCreateListener( BB_HANDLE(Entity) p_h,float roll,float dopp,float dist ){
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
 		debugParent(p);
@@ -1424,11 +1426,12 @@ Entity *  bbCreateListener( BB_HANDLE(Entity) p_h,float roll,float dopp,float di
 }
 
 #if BB_FMOD_ENABLED
-gxChannel *  bbEmitSound( gxSound *sound,Object *o )
+gxChannel *  bbEmitSound( gxSound *sound,BB_HANDLE(Entity) o_h )
 #else
-uint32_t bbEmitSound( Sound *sound,Object *o )
+uint32_t bbEmitSound( Sound *sound,BB_HANDLE(Entity) o_h )
 #endif
 {
+	Object *o=eH<Object> ( o_h );
 	if( debug ){
 		debugObject(o);
 		if( !listener ) RTEX( "No Listener created" );
@@ -1439,7 +1442,7 @@ uint32_t bbEmitSound( Sound *sound,Object *o )
 /////////////////////
 // ENTITY COMMANDS //
 /////////////////////
-Entity *  bbCopyEntity( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) p_h ){
+BB_HANDLE(Entity)  bbCopyEntity( BB_HANDLE(Entity) e_h,BB_HANDLE(Entity) p_h ){
 	Entity *e=eH<Entity> ( e_h );
 	Entity *p=eH<Entity> ( p_h );
 	if( debug ){
@@ -1511,7 +1514,7 @@ int  bbCountChildren( BB_HANDLE(Entity) e_h ){
 	return n;
 }
 
-Entity *  bbGetChild( BB_HANDLE(Entity) e_h,int index ){
+BB_HANDLE(Entity)  bbGetChild( BB_HANDLE(Entity) e_h,int index ){
 	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	Entity *p=e->children();
@@ -1519,7 +1522,7 @@ Entity *  bbGetChild( BB_HANDLE(Entity) e_h,int index ){
 	return p;
 }
 
-Entity *  bbFindChild( BB_HANDLE(Entity) e_h,BBStr *t ){
+BB_HANDLE(Entity)  bbFindChild( BB_HANDLE(Entity) e_h,BBStr *t ){
 	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	e=findChild( e,*t );
@@ -1857,7 +1860,7 @@ void  bbEntityPickMode( BB_HANDLE(Entity) o_h,int mode,int obs ){
 	o->setObscurer( !!obs );
 }
 
-Entity *  bbGetParent( BB_HANDLE(Entity) e_h ){
+BB_HANDLE(Entity)  bbGetParent( BB_HANDLE(Entity) e_h ){
 	Entity *e=eH<Entity> ( e_h );
 	debugEntity(e);
 	return e->getParent();
@@ -1884,7 +1887,7 @@ void  bbEntityBox( BB_HANDLE(Entity) o_h,float x,float y,float z,float w,float h
 	o->setCollisionBox( b );
 }
 
-Object *  bbEntityCollided( BB_HANDLE(Entity) o_h,int type ){
+BB_HANDLE(Entity)  bbEntityCollided( BB_HANDLE(Entity) o_h,int type ){
 	Object *o=eH<Object> ( o_h );
 	debugObject(o);
 	Object::Collisions::const_iterator it;
@@ -1944,7 +1947,7 @@ float  bbCollisionTime( BB_HANDLE(Entity) o_h,int index ){
 	return o->getCollisions()[index-1]->collision.time;
 }
 
-Object *  bbCollisionEntity( BB_HANDLE(Entity) o_h,int index ){
+BB_HANDLE(Entity)  bbCollisionEntity( BB_HANDLE(Entity) o_h,int index ){
 	Object *o=eH<Object> ( o_h );
 	debugColl(o,index);
 	return o->getCollisions()[index-1]->with;

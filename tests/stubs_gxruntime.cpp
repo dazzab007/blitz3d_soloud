@@ -7,6 +7,7 @@
 #include "../gxruntime/gxtimer.h"
 #include "../gxruntime/gxfilesystem.h"
 #include "../gxruntime/gxgraphics.h"
+#include "../gxruntime/gxscene.h"
 #include "../gxruntime/gxinput.h"
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
@@ -44,6 +45,11 @@ void stub_init_runtime() {
 // Stub implementation of gxRuntime methods that bbbank.cpp calls.
 // These are only linked into test binaries, never into the real runtime.
 void gxRuntime::debugError(const char *t) {
+	(void)t;
+}
+
+// gx_runtime->debugLog is called by basic.cpp and the blitz3d loaders.
+void gxRuntime::debugLog(const char *t) {
 	(void)t;
 }
 
@@ -137,10 +143,13 @@ void BBStr::operator delete(void *q) {
 // canvases keep a real CPU pixel store so future graphics tests can
 // round-trip pixels through Lock/WritePixel/CopyRect.
 
-// blitz3d.cpp globals referenced by bbgraphics.cpp (defined in bbblitz3d.cpp
-// on Windows; not linked in the portable build).
+// blitz3d_open/close are defined in bbblitz3d.cpp. When that file is linked
+// (test_bbblitz3d) these stubs would duplicate it; otherwise they provide the
+// symbols bbgraphics.cpp needs.
+#ifndef STUBS_NO_BLITZ3D_OPEN_CLOSE
 void blitz3d_open() {}
 void blitz3d_close() {}
+#endif
 
 // bbinput.cpp globals referenced by bbInput() (bbinput.cpp is Windows-only).
 gxInput *gx_input = 0;
@@ -377,6 +386,8 @@ void gxCanvas::getHandle(int *x, int *y)const { *x = 0; *y = 0; }
 void gxCanvas::getViewport(int *x, int *y, int *ww, int *hh)const { (void)x; (void)y; (void)ww; (void)hh; }
 unsigned gxCanvas::getMask()const { return 0; }
 void gxCanvas::setMask(unsigned argb) { (void)argb; }
+void gxCanvas::setCubeMode(int mode) { (void)mode; }
+void gxCanvas::setCubeFace(int face) { (void)face; }
 unsigned gxCanvas::getColor()const { return 0xffffffff; }
 void gxCanvas::setColor(unsigned argb) { (void)argb; }
 unsigned gxCanvas::getClsColor()const { return 0; }
@@ -448,3 +459,114 @@ gxDevice::gxDevice() {
 gxDevice::~gxDevice() {}
 int gxDevice::getKey() { return 0; }
 bool gxDevice::keyDown(int key) { (void)key; return false; }
+
+// ---- gxScene stubs for the blitz3d test library (commit b) ----
+// bbblitz3d.cpp and the blitz3d TUs call through gxScene*, so the base
+// definitions below are what the test binaries link against. All state is
+// no-op: tests exercise the handle table, not rendering.
+
+gxScene::gxScene(gxGraphics *g, gxCanvas *t)
+	: graphics(g), target(t), wbuffer(false), dither(false), antialias(false),
+	  wireframe(false), flipped(false), ambient(0), ambient2(0), fogcolor(0),
+	  caps_level(1), fogmode(FOG_NONE), zmode(ZMODE_NORMAL),
+	  fogrange_nr(0), fogrange_fr(1), ortho_proj(false),
+	  frustum_nr(0.1f), frustum_fr(1000.f), frustum_w(1), frustum_h(1),
+	  shininess(0), blend(BLEND_REPLACE), fx(FX_VERTEXCOLOR), n_texs(0), tris_drawn(0) {
+	for (int k = 0; k < MAX_TEXTURES; ++k) {
+		texstate[k].canvas = 0;
+		texstate[k].blend = BLEND_REPLACE;
+		texstate[k].flags = 0;
+		texstate[k].mat_valid = false;
+	}
+}
+gxScene::~gxScene() {}
+
+int gxScene::hwTexUnits() { return 1; }
+int gxScene::gfxDriverCaps3D() { return 1; }
+void gxScene::setWBuffer(bool e) { (void)e; }
+void gxScene::setHWMultiTex(bool e) { (void)e; }
+void gxScene::setDither(bool e) { (void)e; }
+void gxScene::setAntialias(bool e) { (void)e; }
+void gxScene::setWireframe(bool e) { (void)e; }
+void gxScene::setFlippedTris(bool e) { (void)e; }
+void gxScene::setAmbient(const float rgb[3]) { (void)rgb; }
+void gxScene::setAmbient2(const float rgb[3]) { (void)rgb; }
+void gxScene::setFogColor(const float rgb[3]) { (void)rgb; }
+void gxScene::setFogRange(float nr, float fr) { (void)nr; (void)fr; }
+void gxScene::setFogMode(int mode) { (void)mode; }
+void gxScene::setZMode(int mode) { (void)mode; }
+void gxScene::setViewport(int x, int y, int w, int h) { (void)x; (void)y; (void)w; (void)h; }
+void gxScene::setOrthoProj(float nr, float fr, float nr_w, float nr_h) { (void)nr; (void)fr; (void)nr_w; (void)nr_h; }
+void gxScene::setPerspProj(float nr, float fr, float nr_w, float nr_h) { (void)nr; (void)fr; (void)nr_w; (void)nr_h; }
+void gxScene::setViewMatrix(const Matrix *m) { (void)m; }
+void gxScene::setWorldMatrix(const Matrix *m) { (void)m; }
+void gxScene::setRenderState(const RenderState &s) { (void)s; }
+bool gxScene::begin(const std::vector<gxLight*> &lights) { (void)lights; return true; }
+void gxScene::clear(const float rgb[3], float alpha, float z, bool clear_argb, bool clear_z) {
+	(void)rgb; (void)alpha; (void)z; (void)clear_argb; (void)clear_z;
+}
+void gxScene::render(gxMesh *mesh, int first_vert, int vert_cnt, int first_tri, int tri_cnt) {
+	(void)mesh; (void)first_vert; (void)vert_cnt; (void)first_tri; (void)tri_cnt;
+}
+void gxScene::end() {}
+// gxLight base methods (blitz3d's Light ctor/dtor call through gxLight*).
+gxLight::gxLight(gxScene *s, int type) : scene(s) { (void)type; }
+gxLight::~gxLight() {}
+void gxLight::setRange(float range) { (void)range; }
+void gxLight::setColor(const float rgb[3]) { (void)rgb; }
+void gxLight::getColor(float rgb[3]) { rgb[0] = rgb[1] = rgb[2] = 1; }
+void gxLight::setPosition(const float pos[3]) { (void)pos; }
+void gxLight::setDirection(const float dir[3]) { (void)dir; }
+void gxLight::setConeAngles(float inner, float outer) { (void)inner; (void)outer; }
+
+gxLight *gxScene::createLight(int flags) { (void)flags; return 0; }
+void gxScene::freeLight(gxLight *l) { (void)l; }
+int gxScene::getTrianglesDrawn()const { return tris_drawn; }
+void gxScene::setEnabled(gxLight *light, bool enabled) { (void)light; (void)enabled; }
+
+// gxGraphics scene factory methods.
+gxScene *gxGraphics::createScene(int flags) {
+	(void)flags;
+	return new gxScene(this, front_canvas);
+}
+gxScene *gxGraphics::verifyScene(gxScene *scene) { return scene; }
+void gxGraphics::freeScene(gxScene *scene) { delete scene; }
+
+// gxGraphics canvas copy (blitz3d's cachedtexture.cpp calls through gxGraphics*).
+void gxGraphics::copy(gxCanvas *dest, int dx, int dy, int dw, int dh,
+                      gxCanvas *src, int sx, int sy, int sw, int sh) {
+	(void)dest; (void)dx; (void)dy; (void)dw; (void)dh;
+	(void)src; (void)sx; (void)sy; (void)sw; (void)sh;
+}
+
+// gxMesh: blitz3d allocates meshes via gxGraphics::createMesh and fills them
+// through lock/setVertex/setTriangle/unlock. The stub keeps a plain CPU
+// buffer so the whole path works without any graphics API.
+gxMesh::gxMesh(gxGraphics *g, void *verts, unsigned short *indicies, int max_verts, int max_tris)
+	: graphics(g), vertex_buff(0), tri_indices(0),
+	  max_verts(max_verts), max_tris(max_tris), mesh_dirty(false), locked_verts(0) {
+	(void)verts; (void)indicies;
+}
+gxMesh::~gxMesh() {
+	if (vertex_buff) free(vertex_buff);
+	if (tri_indices) free(tri_indices);
+}
+bool gxMesh::lock(bool all) {
+	(void)all;
+	if (!vertex_buff) vertex_buff = calloc(max_verts, 32);
+	if (!tri_indices) tri_indices = (unsigned short*)calloc(max_tris * 3, sizeof(unsigned short));
+	locked_verts = (gxMesh::dxVertex*)vertex_buff;
+	return true;
+}
+void gxMesh::unlock() { locked_verts = 0; }
+void gxMesh::render(int first_vert, int vert_cnt, int first_tri, int tri_cnt) {
+	(void)first_vert; (void)vert_cnt; (void)first_tri; (void)tri_cnt;
+}
+void gxMesh::backup() {}
+void gxMesh::restore() {}
+
+gxMesh *gxGraphics::createMesh(int max_verts, int max_tris, int flags) {
+	(void)flags;
+	return new gxMesh(this, 0, 0, max_verts, max_tris);
+}
+void gxGraphics::freeMesh(gxMesh *mesh) { delete mesh; }

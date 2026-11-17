@@ -90,8 +90,10 @@ add_library(blitz3d ${BLITZ3D_SRCS})
 
 bb_target_options(blitz3d)
 
-# Portable build: static library, not linked into anything yet. No Windows libs.
+# Portable build: static library, no Windows libs. Linked by bbruntime_core
+# (and its test executables) so the blitz3d handle-table tests can run.
 if (BB_PORTABLE_BUILD)
+	target_link_libraries(blitz3d soloud)
 	return ()
 endif ()
 

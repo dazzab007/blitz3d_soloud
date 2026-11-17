@@ -75,7 +75,16 @@ if (BB_PORTABLE_BUILD)
 	# build picks soloud vs FMOD conditionally, so it must not be unconditional.
 	add_library(bbruntime_core ${BB_CORE_SRCS} bb_handle.cpp bbaudio_soloud.cpp)
 	bb_target_options(bbruntime_core)
-	target_link_libraries(bbruntime_core bb_handle soloud)
+	# stdutil: bbblitz3d.cpp (linked into test_bbblitz3d) uses itoa/filenamefile/tolower.
+	target_link_libraries(bbruntime_core bb_handle soloud blitz3d stdutil)
+
+	# 3D handle-table integration test: links real bbblitz3d.cpp + the blitz3d
+	# library + stubs (gxScene/gxGraphics scene methods, etc.).
+	add_executable(test_bbblitz3d ../tests/test_bbblitz3d.cpp ../tests/stubs_gxruntime.cpp bbblitz3d.cpp)
+	bb_target_options(test_bbblitz3d)
+	target_compile_definitions(test_bbblitz3d PRIVATE STUBS_NO_BLITZ3D_OPEN_CLOSE)
+	target_link_libraries(test_bbblitz3d bbruntime_core)
+
 
 	# Stream + filesystem handle-table integration test.
 	add_executable(test_bbstream ../tests/test_bbstream.cpp ../tests/stubs_gxruntime.cpp)
