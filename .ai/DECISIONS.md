@@ -43,3 +43,6 @@
 - a2: blitz3d lib compiles on macOS (babf964) — fwd decls + const void* nested-type accessors + itoa fix
 - a2: blitz3d lib compiles on macOS (babf964) — fwd decls + const void* nested-type accessors + itoa fix
 - c: bbPickedSurface/bbCollisionSurface return (Surface*)collision.surface — Collision::surface is void*, so a C-style cast is needed for the implicit pointer→bbH<Surface> conversion; on Windows the cast is identity (void*→Surface*→bbHPtr<Surface>=Surface*)
+- d: test accessors (EntityListTest, MeshSurfaceTest) use __attribute__((used)) to prevent dead-code elimination — inline static methods in a different TU get eliminated if not called within that TU
+- d: gx_scene stub added to stubs_gxruntime.cpp (guarded by STUBS_NO_BLITZ3D_OPEN_CLOSE) for test targets that link blitz3d lib but not bbblitz3d.cpp
+- d: bbClearWorld does NOT free graphics context canvases (front/back) — only entities, brushes, textures. Test expects non-canvas entries to be zero, not by_ptr.empty()

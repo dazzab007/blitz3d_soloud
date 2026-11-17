@@ -43,9 +43,17 @@
   - Syntax check (-DBB_BLITZ3D_ENABLED=1): 0 errors. Build: 0 errors.
   - All 7 Mac suites pass: 407+26+28+11+27+19+17.
 
+## Done (d)
+- 3D commit (d): test_bbblitz3d lifecycle and stale-handle coverage (uncommitted).
+  - 5 new tests: parent/child pivots, texture+canvas stale after free, brush lifecycle, surface stale after mesh free, ClearWorld empties table.
+  - Test accessors: EntityListTest (orphanCount, childCount), MeshSurfaceTest (first, count) — both use __attribute__((used)) to prevent dead-code elimination.
+  - Stub additions: gx_scene definition (for non-test_bbblitz3d targets that link blitz3d lib); removed duplicate stats3d/active_texs/bbSet3dListenerConfig stubs.
+  - Header changes: entity.h friend EntityListTest (non-Windows). All other blitz3d headers reverted to original.
+  - All 7 Mac suites pass: 407+26+28+11+27+19+61.
+
 ## Next
-- Push commit (c) + Windows CI green (gh run watch --exit-status)
-- 3D commit (d): handle_table blitz3d tests (tests/test_bbblitz3d.cpp extension)
+- Commit "test_bbblitz3d: lifecycle and stale-handle coverage"
+- Push + Windows CI green (gh run watch --exit-status)
 
 ## Blockers
 - None

@@ -9,11 +9,31 @@
 #include "../gxruntime/gxgraphics.h"
 #include "../gxruntime/gxscene.h"
 #include "../gxruntime/gxinput.h"
+// blitz3d headers (stubs_gxruntime.cpp is a portable test-only file; the
+// non-Windows stubs below are guarded by #ifndef _WIN32). blitz3d/std.h must
+// come first: it provides `using namespace std;` and d_new, which the other
+// blitz3d headers rely on.
+#include "../blitz3d/std.h"
+#include "../blitz3d/entity.h"
+#include "../blitz3d/object.h"
+#include "../blitz3d/pivot.h"
+#include "../blitz3d/model.h"
+#include "../blitz3d/meshmodel.h"
+#include "../blitz3d/camera.h"
+#include "../blitz3d/light.h"
+#include "../blitz3d/mirror.h"
+#include "../blitz3d/listener.h"
+#include "../blitz3d/sprite.h"
+#include "../blitz3d/planemodel.h"
+#include "../blitz3d/terrain.h"
+#include "../blitz3d/world.h"
+#include "../blitz3d/brush.h"
 #include "../bbruntime/basic.h"
 #include "../bbruntime/bbsys.h"
 #include "../bbruntime/bbstream.h"
 #ifndef _WIN32
 #include "../bbruntime/bb_handle.h"
+#include "../gxruntime/gxscene.h"
 #endif
 #include <set>
 #include <string>
@@ -570,3 +590,39 @@ gxMesh *gxGraphics::createMesh(int max_verts, int max_tris, int flags) {
 	return new gxMesh(this, 0, 0, max_verts, max_tris);
 }
 void gxGraphics::freeMesh(gxMesh *mesh) { delete mesh; }
+
+// The blitz3d library references gx_scene, which is normally defined in
+// bbblitz3d.cpp. Only test_bbblitz3d links that file; the other tests need a
+// stub so they can link against libblitz3d.a.
+#ifndef STUBS_NO_BLITZ3D_OPEN_CLOSE
+gxScene *gx_scene = 0;
+#endif
+
+// ---- blitz3d entity-class stubs (commit d) ---------------------------------
+// The test binaries link the REAL blitz3d library, which defines every Entity
+// subclass. These definitions are therefore guarded out on Windows (the real
+// gxruntime TUs provide them there); they exist so the macOS test links can
+// pull in the entity classes bbblitz3d.cpp references (Pivot, Camera, Light,
+// Mirror, Listener, Sprite, PlaneModel, Terrain, World) without pulling in
+// their full .cpp files (loaders, renderers, audio).
+
+#ifndef _WIN32
+// Test-only accessors (friend-declared in the blitz3d headers, guarded by
+// #ifndef _WIN32). They let the tests verify handle bookkeeping through the
+// real scene-graph objects without depending on rendering.
+class EntityListTest {
+public:
+	__attribute__((used)) static int orphanCount() { return Entity::_orphans ? 1 : 0; }
+	__attribute__((used)) static int childCount(Pivot *p) { return p->_children ? 1 : 0; }
+};
+
+// MeshModel's surface list is public API, so no friend needed.
+class MeshSurfaceTest {
+public:
+	__attribute__((used)) static Surface *first(MeshModel *m) {
+		const MeshModel::SurfaceList &s = m->getSurfaces();
+		return s.empty() ? 0 : s.front();
+	}
+	__attribute__((used)) static int count(MeshModel *m) { return (int)m->getSurfaces().size(); }
+};
+#endif

@@ -2,6 +2,11 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+// Test-only access to the entity list (tests/stubs_gxruntime.cpp); no-op on Windows.
+#ifndef _WIN32
+class EntityListTest;
+#endif
+
 #include <list>
 
 #include "geom.h"
@@ -72,6 +77,10 @@ public:
 	const Transform &getWorldTform()const;
 
 	static Entity *orphans(){ return _orphans; }
+
+#ifndef _WIN32
+	friend class EntityListTest;
+#endif
 
 private:
 	Entity *_succ,*_pred,*_parent,*_children,*_last_child;
