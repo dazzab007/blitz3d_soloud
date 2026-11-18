@@ -88,11 +88,11 @@ TNode *ArrayVarNode::translate( Codegen *g ){
 	for( int k=0;k<exprs->size();++k ){
 		TNode *e=exprs->exprs[k]->translate( g );
 		if( k ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k-1) ) ) );
 			e=add( t,mul( e,s ) );
 		}
 		if( g->debug ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_DIMS_OFF+k*BB_SLOT ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) ) );
 			t=jumpge( e,s,"__bbArrayBoundsEx" );
 		}else t=e;
 	}

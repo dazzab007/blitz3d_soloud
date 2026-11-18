@@ -10,10 +10,18 @@
 #define BB_SLOT 8
 #endif
 
-//BBArray header layout (basic.h): data ptr, elementType, dims, scales[1].
+//BBArray header layout follows the real struct in basic.h:
+//{void *data; int elementType,dims,scales[1];}
+//The data pointer is BB_PTR wide; elementType/dims/scales are 32-bit ints.
+#ifdef _WIN32
+#define BB_PTR 4
+#else
+#define BB_PTR 8
+#endif
+
 #define BB_ARRAY_DATA_OFF	0
-#define BB_ARRAY_DIMS_OFF	(2*BB_SLOT)
-#define BB_ARRAY_SCALE_OFF(k)	(BB_ARRAY_DIMS_OFF + (k+1)*BB_SLOT)
+#define BB_ARRAY_DIMS_OFF	(BB_PTR+4)
+#define BB_ARRAY_SCALE_OFF(k)	(BB_PTR+8+(k)*4)
 
 //BBObj field stride: fields are a 1-ptr-aligned array of BBField.
 #define BB_FIELD_STRIDE		BB_SLOT
