@@ -1,0 +1,2 @@
+# Baseline asm dumps are captured byte-for-byte on Windows (CRLF); never let git re-normalize them.
+tests/asm_baseline/* -text
