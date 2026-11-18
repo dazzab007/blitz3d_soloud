@@ -57,6 +57,18 @@ int main() {
 
 	delete a; delete b; delete c;
 
+	// Growable table: register 5000 envs, ids stay index+1, all resolve.
+	Environ *envs[5000];
+	for (int k = 0; k < 5000; ++k)
+		envs[k] = new Environ("", Type::int_type, 0, 0);
+	int first_id = debugEnvId(envs[0]);
+	for (int k = 0; k < 5000; ++k)
+		CHECK(debugEnvId(envs[k]) == first_id + k);
+	for (int k = 0; k < 5000; ++k)
+		CHECK(debugEnvLookup(first_id + k) == envs[k]);
+	for (int k = 4999; k >= 0; --k)
+		delete envs[k];
+
 	printf("=======================\n");
 	printf("%d checks, %d failed\n", tests_run, tests_failed);
 	if (tests_failed) {

@@ -46,3 +46,4 @@
 - d: test accessors (EntityListTest, MeshSurfaceTest) use __attribute__((used)) to prevent dead-code elimination — inline static methods in a different TU get eliminated if not called within that TU
 - d: gx_scene stub added to stubs_gxruntime.cpp (guarded by STUBS_NO_BLITZ3D_OPEN_CLOSE) for test targets that link blitz3d lib but not bbblitz3d.cpp
 - d: bbClearWorld does NOT free graphics context canvases (front/back) — only entities, brushes, textures. Test expects non-canvas entries to be zero, not by_ptr.empty()
+debugenv table growable (vector, index+1 ids; 5000-env test) — fixed 1024 cap would silently drop debug env ids in large programs

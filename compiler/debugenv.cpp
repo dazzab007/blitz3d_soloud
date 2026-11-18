@@ -2,19 +2,17 @@
 
 #ifndef _WIN32
 
-static Environ *g_debug_envs[1024];
-static int g_debug_env_count = 0;
+static vector<Environ*> g_debug_envs;
 
 int debugEnvId( Environ *e ){
-	for( int k=0;k<g_debug_env_count;++k )
+	for( int k=0;k<g_debug_envs.size();++k )
 		if( g_debug_envs[k]==e ) return k+1;
-	if( g_debug_env_count>=1024 ) return 0; // table full: no id (debug only)
-	g_debug_envs[g_debug_env_count++]=e;
-	return g_debug_env_count;
+	g_debug_envs.push_back( e );
+	return g_debug_envs.size();
 }
 
 Environ *debugEnvLookup( int id ){
-	if( id<=0 || id>g_debug_env_count ) return 0;
+	if( id<=0 || id>g_debug_envs.size() ) return 0;
 	return g_debug_envs[id-1];
 }
 

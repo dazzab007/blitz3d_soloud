@@ -4,9 +4,9 @@
   int, for the __bbDebugEnter call emitted in debug builds.
 
   On _WIN32 (32-bit) the pointer itself is the id: behaviour unchanged.
-  On non-Windows (64-bit) each Environ* is registered in a table and an
-  index+1 is returned; 0 = null. The future Mac debugger resolves ids with
-  debugEnvLookup.
+  On non-Windows (64-bit) each Environ* is registered in a growable table
+  and an index+1 is returned; 0 = null. The future Mac debugger resolves
+  ids with debugEnvLookup.
 
   */
 

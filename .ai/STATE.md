@@ -58,8 +58,12 @@
 - `tests/test_debugenv.cpp`: 11 checks (ids 1/2/3, round-trip, out-of-range → 0). All 8 Mac suites pass.
 - Future Mac debugger must map env ids via `debugEnvLookup` (compiler/debugenv.h).
 
+## Done (f)
+- debugenv: fixed 1024-slot table → growable `vector<Environ*>` (compiler/debugenv.cpp); ids stay index+1.
+- test_debugenv: 5000-env block (id assignment + round-trip for all). 10011 checks, 0 failed. All 8 Mac suites pass.
+
 ## Next
-- (Prompt 5) gxruntime on SDL2 + OpenGL backend
+- Prompt 3: x86-64 codegen (sockets deferred until .bb programs run on macOS)
 
 ## Blockers
 - None
