@@ -22,5 +22,6 @@ jobs:
           ..\..\BLITZ3D_INSTALL\bin\blitzcc.exe -a -c -d abitest.bb > abitest_d.out
           cd ..\..
           dir tests\asm_baseline
+          type tests\asm_baseline\abitest.out | find /c /v ""
           git diff --no-index --exit-code tests/asm_baseline/abitest.txt abitest.out || exit /b 1
           git diff --no-index --exit-code tests/asm_baseline/abitest_d.txt abitest_d.out || exit /b 1
