@@ -52,3 +52,6 @@ debugenv table growable (vector, index+1 ids; 5000-env test) — fixed 1024 cap 
 - x64 c1: exprnode.cpp `iconst(4)` at the void* userlib deref left untouched — it's a pointer-width site for the x64 backend (commit 3/4), not a BBArray/BBObj layout constant, and the plan lists it under D4 tagging
 - x64 c2: frame hooks argOffset/localOffset are pure virtual on Codegen; enumVars takes the Codegen (declnode.cpp/prognode.cpp both already have g) — front end no longer hard-codes +20/-4
 - x64 c2: BB_ARG_BASE_OFF dropped from bb_abi.h (first attempt #error'd on macOS since codegen_x86 compiles there too); the 20 lives only in Codegen_x86::argOffset where it belongs
+- x64 c3a: bbdump lives in tests/x64/ but is added to CMake from bbruntime/CMakeLists.txt portable block (the existing home for portable test executables); links the compiler lib target
+- x64 c3a: DumpCodegen argOffset/localOffset return x86-32 values (20+k*4, -4*(k+1)) per prompt; the x64 backend will override with its own layout
+- x64 c3a: bbdump.cpp must include compiler/std.h before any front-end header — they use bare string/istream/vector without #include <string> themselves (compiler/*.cpp always include std.h first)

@@ -1,0 +1,281 @@
+func __MAIN frame=16
+CALL 8
+  GLOBAL "__bbRestore"
+  MOVE
+    GLOBAL "__DATA"
+    MEM
+      ARG
+CALL 8
+  GLOBAL "__bbLoadLibs"
+  MOVE
+    GLOBAL "__LIBS"
+    MEM
+      ARG
+JSR "_2_begin"
+JUMP "_2_leave"
+label _2_begin
+MOVE
+  MOVE
+    CONST
+    MEM
+      LOCAL -4
+  MEM
+    LOCAL -8
+CALL 8
+  GLOBAL "__bbUndimArray"
+  MOVE
+    GLOBAL "_agrid"
+    MEM
+      ARG
+MOVE
+  CONST 4
+  MEM
+    ADD
+      GLOBAL "_agrid"
+      CONST 16
+MOVE
+  CONST 4
+  MEM
+    ADD
+      GLOBAL "_agrid"
+      CONST 20
+CALL 8
+  GLOBAL "__bbDimArray"
+  MOVE
+    GLOBAL "_agrid"
+    MEM
+      ARG
+align 4
+data "0" label=_agrid
+data "1"
+data "2"
+data "0"
+data "0"
+CALL 16
+  GLOBAL "__bbObjStore"
+  SEQ
+    MOVE
+      LOCAL -4
+      MEM
+        ARG
+    MOVE
+      CALL 8
+        GLOBAL "__bbObjNew"
+        MOVE
+          GLOBAL "_tthing"
+          MEM
+            ARG
+      MEM
+        ARG 8
+MOVE
+  CONST 5
+  MEM
+    ADD
+      MEM
+        MEM
+          LOCAL -4
+      CONST
+data "hi" label=_5
+CALL 16
+  GLOBAL "__bbStrStore"
+  SEQ
+    MOVE
+      ADD
+        MEM
+          MEM
+            LOCAL -4
+        CONST 16
+      MEM
+        ARG
+    MOVE
+      CALL 8
+        GLOBAL "__bbStrConst"
+        MOVE
+          GLOBAL "_5"
+          MEM
+            ARG
+      MEM
+        ARG 8
+MOVE
+  CALL 24
+    GLOBAL "_faddup"
+    SEQ
+      MOVE
+        MEM
+          ADD
+            MEM
+              MEM
+                LOCAL -4
+            CONST
+        MEM
+          ARG
+      SEQ
+        MOVE
+          CONST 7
+          MEM
+            ARG 8
+        SEQ
+          MOVE
+            CALL 8
+              GLOBAL "__bbStrLoad"
+              MOVE
+                ADD
+                  MEM
+                    MEM
+                      LOCAL -4
+                  CONST 16
+                MEM
+                  ARG
+            MEM
+              ARG 16
+  MEM
+    ADD
+      MEM
+        GLOBAL "_agrid"
+      MUL
+        ADD
+          CONST 2
+          MUL
+            CONST 3
+            MEM
+              ADD
+                GLOBAL "_agrid"
+                CONST 16
+        CONST 8
+MOVE
+  CONST
+  MEM
+    LOCAL -8
+JUMP "_6"
+label _7
+MOVE
+  MUL
+    MEM
+      LOCAL -8
+    CONST 2
+  MEM
+    ADD
+      MEM
+        GLOBAL "_agrid"
+      MUL
+        ADD
+          MEM
+            LOCAL -8
+          MUL
+            MEM
+              LOCAL -8
+            MEM
+              ADD
+                GLOBAL "_agrid"
+                CONST 16
+        CONST 8
+MOVE
+  ADD
+    MEM
+      LOCAL -8
+    CONST 1
+  MEM
+    LOCAL -8
+label _6
+JUMPF "_7"
+  SETGT
+    MEM
+      LOCAL -8
+    CONST 4
+label _3
+CALL 8
+  GLOBAL "_fprint"
+  SEQ
+    MOVE
+      MEM
+        ADD
+          MEM
+            GLOBAL "_agrid"
+          MUL
+            ADD
+              CONST 2
+              MUL
+                CONST 3
+                MEM
+                  ADD
+                    GLOBAL "_agrid"
+                    CONST 16
+            CONST 8
+      MEM
+        ARG
+RET
+label _2_leave
+cleanup:
+  SEQ
+    CALL 8
+      GLOBAL "__bbObjRelease"
+      MOVE
+        MEM
+          LOCAL -4
+        MEM
+          ARG
+leave pop=0
+align 4
+data "5" label=_tthing
+data "0" label=_8
+ptr _8
+ptr _8
+data "0"
+data "-1"
+data "0" label=_9
+ptr _9
+ptr _9
+data "0"
+data "-1"
+data "3"
+ptr __bbIntType
+ptr __bbFltType
+ptr __bbStrType
+func _faddup frame=8
+MOVE
+  CONST
+  MEM
+    LOCAL -4
+MOVE
+  ADD
+    MEM
+      LOCAL 20
+    MEM
+      LOCAL 24
+  MEM
+    LOCAL -4
+RETURN "_4_leave"
+  ADD
+    MEM
+      LOCAL -4
+    CALL 8
+      GLOBAL "_flen"
+      SEQ
+        MOVE
+          CALL 8
+            GLOBAL "__bbStrLoad"
+            MOVE
+              LOCAL 28
+              MEM
+                ARG
+          MEM
+            ARG
+RETURN "_4_leave"
+  CONST
+label _4_leave
+cleanup:
+  SEQ
+    CALL 8
+      GLOBAL "__bbStrRelease"
+      MOVE
+        MEM
+          LOCAL 28
+        MEM
+          ARG
+leave pop=24
+align 4
+label __LIBS
+data ""
+align 4
+label __DATA
+data "0"

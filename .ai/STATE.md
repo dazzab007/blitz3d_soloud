@@ -80,8 +80,18 @@
   - Windows output unchanged by construction: same int values reach the same TNodes → identical asm (CI baseline compares).
   - Mac: build OK, all 11 suites pass. PC identical-exe check: CI asm-baseline comparison is the equivalent proof.
 
+## Done (Prompt 3, commit 3a)
+- IR dump tool: tests/x64/dump_codegen.h/.cpp (DumpCodegen prints TNode trees as indented text),
+  tests/x64/bbdump.cpp (Mac CLI: parse+semant+translate a .bb through the real front end into DumpCodegen).
+  - Runtime symbols declared in one table in bbdump.cpp (Print, Len + all __bb* internals).
+  - Added to portable CMake as executable `bbdump` (links compiler lib).
+  - Ran on tests/asm_baseline/abitest.bb → tests/x64/abitest.dump; trees match the x86 baseline asm
+    (same ops/order/offsets: addup params at LOCAL +20/+24/+28, local t at -4, For i at -8).
+  - `typeof` renamed to `bb_typeof` in bbdump.cpp: macOS Clang reserves `typeof` even in gnu++14.
+  - Mac: build OK, all 11 suites pass.
+
 ## Next
-- Prompt 3 commit 3: TNode `wide` tagging — x64-plan.md section 5
+- Prompt 3 commit 3b: TNode `wide` tagging — x64-plan.md section 5
 
 ## Blockers
 - None

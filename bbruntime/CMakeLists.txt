@@ -122,6 +122,12 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_bbaudio)
 	target_link_libraries(test_bbaudio bbruntime_core)
 
+	# IR dump tool: drives the real compiler front end into DumpCodegen
+	# (tests/x64/), used to verify x64 backend output against the x86-32 one.
+	add_executable(bbdump ../tests/x64/bbdump.cpp ../tests/x64/dump_codegen.cpp)
+	bb_target_options(bbdump)
+	target_link_libraries(bbdump compiler)
+
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
 	# which are not yet ported.
