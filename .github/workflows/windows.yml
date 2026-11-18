@@ -16,11 +16,11 @@ jobs:
       - name: Check codegen against baseline
         shell: cmd
         run: |
+          copy tests\asm_baseline\abitest.bb abitest.bb
           set blitzpath=%CD%\BLITZ3D_INSTALL
-          cd tests\asm_baseline
-          ..\..\BLITZ3D_INSTALL\bin\blitzcc.exe -a -c abitest.bb > abitest.out
-          ..\..\BLITZ3D_INSTALL\bin\blitzcc.exe -a -c -d abitest.bb > abitest_d.out
+          cd BLITZ3D_INSTALL\bin
+          blitzcc.exe -a -c ../../abitest.bb > ..\..\abitest.out
+          blitzcc.exe -a -c -d ../../abitest.bb > ..\..\abitest_d.out
           cd ..\..
-          dir tests\asm_baseline
-          git diff --no-index --exit-code tests/asm_baseline/abitest.txt abitest.out || exit /b 1
-          git diff --no-index --exit-code tests/asm_baseline/abitest_d.txt abitest_d.out || exit /b 1
+          fc tests\asm_baseline\abitest.txt abitest.out || exit /b 1
+          fc tests\asm_baseline\abitest_d.txt abitest_d.out || exit /b 1
