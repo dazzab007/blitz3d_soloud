@@ -44,9 +44,10 @@ void DumpCodegen::code( TNode *stmt ){
 void DumpCodegen::printNode( TNode *t,int depth ){
 	string pad( depth*2,' ' );
 	out<<pad<<opName( t->op );
-	if( t->iconst ) out<<" "<<t->iconst;
+	if( t->op==IR_CONST ) out<<" "<<t->iconst; // always print CONST value (even 0)
+	else if( t->iconst ) out<<" "<<t->iconst;
 	if( t->sconst.size() ) out<<" \""<<t->sconst<<"\"";
-	//commit 3: append " wide" here once TNode carries the flag
+	if( t->wide ) out<<" W"; // D4: pointer-width value
 	out<<'\n';
 	if( t->l ) printNode( t->l,depth+1 );
 	if( t->r ) printNode( t->r,depth+1 );
@@ -68,17 +69,19 @@ void DumpCodegen::label( const string &l ){
 void DumpCodegen::i_data( int i,const string &l ){
 	char buf[64];
 	snprintf( buf,sizeof(buf),"%d",i );
-	s_data( buf,l );
+	out<<"idata \""<<buf<<"\"";
+	if( l.size() ) out<<" label="<<l;
+	out<<'\n';
 }
 
 void DumpCodegen::s_data( const string &s,const string &l ){
-	out<<"data \""<<s<<"\"";
+	out<<"sdata \""<<s<<"\"";
 	if( l.size() ) out<<" label="<<l;
 	out<<'\n';
 }
 
 void DumpCodegen::p_data( const string &p,const string &l ){
-	out<<"ptr "<<p;
+	out<<"pdata "<<p;
 	if( l.size() ) out<<" label="<<l;
 	out<<'\n';
 }

@@ -110,7 +110,7 @@ void DimNode::translate( Codegen *g ){
 	g->code( call( "__bbUndimArray",global( "_a"+ident ) ) );
 	for( int k=0;k<exprs->size();++k ){
 		t=add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) );
-		t=move( exprs->exprs[k]->translate(g),mem( t ) );
+		t=move( exprs->exprs[k]->translate(g),mem( t,false ) ); // scale is int (not wide)
 		g->code( t );
 	}
 	g->code( call( "__bbDimArray",global( "_a"+ident ) ) );

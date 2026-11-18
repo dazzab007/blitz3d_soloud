@@ -95,18 +95,19 @@ TNode *ExprSeqNode::translate( Codegen *g,bool cfunc ){
 		if( cfunc ){
 			Type *ty=exprs[k]->sem_type;
 			if( ty->stringType() ){
-				q=call( "__bbStrToCStr",q );
+				q=call( "__bbStrToCStr",q ); // returns char* (wide)
 			}else if( ty->structType() ){
-				q=d_new TNode( IR_MEM,q );
+				q=d_new TNode( IR_MEM,q ); q->wide=true; // D4: deref object pointer
 			}else if( ty==Type::void_type ){
-				q=d_new TNode( IR_MEM,add(q,iconst(4)) );
+				q=d_new TNode( IR_MEM,add(q,iconst(4)) ); // void* param: skip to next slot (int)
 			}
 		}
 
 		TNode *p;
 		p=d_new TNode( IR_ARG,0,0,k*BB_SLOT );
-		p=d_new TNode( IR_MEM,p,0 );
+		p=mem( p,isWideType( exprs[k]->sem_type ) ); // D4: tag arg slot stores
 		p=d_new TNode( IR_MOVE,q,p );
+		p->wide=p->r->wide; // MOVE is wide if dest MEM is wide
 		p=d_new TNode( IR_SEQ,p,0 );
 		if( l ) l->r=p;
 		else t=p;
@@ -172,7 +173,7 @@ TNode *CallNode::translate( Codegen *g ){
 	TNode *r=exprs->translate( g,f->cfunc );
 
 	if( f->userlib ){
-		l=d_new TNode( IR_MEM,l );
+		l=d_new TNode( IR_MEM,l ); l->wide=true; // D4: userlib function pointer (wide)
 		usedfuncs.insert( ident );
 	}
 
@@ -180,6 +181,7 @@ TNode *CallNode::translate( Codegen *g ){
 		t=d_new TNode( IR_FCALL,l,r,exprs->size()*BB_SLOT );
 	}else{
 		t=d_new TNode( IR_CALL,l,r,exprs->size()*BB_SLOT );
+		t->wide=isWideType( sem_type ); // D4: tag pointer-returning calls
 	}
 
 	if( f->returnType->stringType() ){

@@ -75,7 +75,7 @@ TNode *Node::createVars( Environ *e ){
 		if( d->type->vectorType() ) continue;
 		if( !t ) t=d_new TNode( IR_CONST,0,0,0 );
 		TNode *p=d_new TNode( IR_LOCAL,0,0,d->offset );
-		p=d_new TNode( IR_MEM,p,0 );
+		p=mem( p,isWideType( d->type ) );
 		t=d_new TNode( IR_MOVE,t,p );
 	}
 	//initialize vectors
@@ -85,8 +85,9 @@ TNode *Node::createVars( Environ *e ){
 		VectorType *v=d->type->vectorType();
 		if( !v ) continue;
 		TNode *p=call( "__bbVecAlloc",global( v->label ) );
+		p->wide=true; // __bbVecAlloc returns void* (pointer)
 		TNode *m=d->kind==DECL_GLOBAL ? global( "_v"+d->name ) : local( d->offset );
-		p=move( p,mem( m ) );
+		p=move( p,mem( m,true ) ); // vector slot holds a pointer
 		if( t ) t=seq( t,p );
 		else t=p;
 	}
@@ -105,19 +106,19 @@ TNode *Node::deleteVars( Environ *e ){
 		if( type==Type::string_type ){
 			if( d->kind==DECL_LOCAL || d->kind==DECL_PARAM ){
 				func="__bbStrRelease";
-				p1=mem( local( d->offset ) );
+				p1=mem( local( d->offset ),true ); // string slot holds BBStr*
 				p2=0;
 			}
 		}else if( type->structType() ){
 			if( d->kind==DECL_LOCAL ){
 				func="__bbObjRelease";
-				p1=mem( local( d->offset ) );
+				p1=mem( local( d->offset ),true ); // object slot holds BBObj*
 				p2=0;
 			}
 		}else if( VectorType *v=type->vectorType() ){
 			if( d->kind==DECL_LOCAL ){
 				func="__bbVecFree";
-				p1=mem( local( d->offset ) );
+				p1=mem( local( d->offset ),true ); // vector slot holds void*
 				p2=global( v->label );
 			}
 		}
@@ -196,7 +197,9 @@ TNode *Node::call( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 		}
 	}
 	TNode *l=d_new TNode( IR_GLOBAL,0,0,func );
-	return d_new TNode( IR_CALL,l,t,size );
+	TNode *r=d_new TNode( IR_CALL,l,t,size );
+	r->wide=isPointerHelper( func ); // D4: tag pointer-returning helpers
+	return r;
 }
 
 ////////////////////////////////////////////////////////
@@ -226,7 +229,10 @@ TNode *Node::seq( TNode *l,TNode *r ){
 }
 
 TNode *Node::move( TNode *src,TNode *dest ){
-	return d_new TNode( IR_MOVE,src,dest );
+	TNode *t=d_new TNode( IR_MOVE,src,dest );
+	//D4: MOVE is wide if dest is a wide MEM (storing to a pointer slot)
+	if( dest && dest->op==IR_MEM ) t->wide=dest->wide;
+	return t;
 }
 
 TNode *Node::global( const string &s ){
@@ -241,8 +247,31 @@ TNode *Node::arg( int offset ){
 	return d_new TNode( IR_ARG,0,0,offset );
 }
 
-TNode *Node::mem( TNode *ref ){
-	return d_new TNode( IR_MEM,ref,0 );
+TNode *Node::mem( TNode *ref,bool wide ){
+	TNode *t=d_new TNode( IR_MEM,ref,0 );
+	t->wide=wide;
+	return t;
+}
+
+//D4 in x64-plan.md: pointer-width type check
+bool Node::isWideType( Type *ty ){
+	if( !ty ) return false;
+	return ty->stringType() || ty->structType() || ty->vectorType();
+}
+
+//D4 in x64-plan.md: __bb* helpers that return pointers (x64 only)
+bool Node::isPointerHelper( const string &name ){
+	static const char *helpers[] = {
+		"__bbObjNew","__bbObjFirst","__bbObjLast",
+		"__bbObjNext","__bbObjPrev","__bbObjFromHandle",
+		"__bbStrLoad","__bbStrConcat","__bbStrConst",
+		"__bbStrFromInt","__bbStrFromFloat","__bbStrToCStr",
+		"__bbObjToStr","__bbReadStr","__bbVecAlloc",
+		0
+	};
+	for( const char **h=helpers;*h;++h )
+		if( name==*h ) return true;
+	return false;
 }
 
 TNode *Node::add( TNode *l,TNode *r ){

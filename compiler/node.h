@@ -39,7 +39,7 @@ struct Node{
 	static TNode *global( const string &s );
 	static TNode *local( int offset );
 	static TNode *arg( int offset );
-	static TNode *mem( TNode *ref );
+	static TNode *mem( TNode *ref,bool wide=false );
 	static TNode *add( TNode *l,TNode *r );
 	static TNode *mul( TNode *l,TNode *r );
 	static TNode *iconst( int n );
@@ -51,6 +51,10 @@ struct Node{
 	static TNode *jumpge( TNode *l,TNode *r,const string &s );
 	static TNode *call( const string &func,TNode *a0=0,TNode *a1=0,TNode *a2=0 );
 	static TNode *fcall( const string &func,TNode *a0=0,TNode *a1=0,TNode *a2=0 );
+
+	//D4 in x64-plan.md: pointer-width tagging
+	static bool isWideType( Type *ty );
+	static bool isPointerHelper( const string &name );
 };
 
 #endif

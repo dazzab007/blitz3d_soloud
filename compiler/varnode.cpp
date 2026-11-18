@@ -8,15 +8,15 @@
 //////////////////////////////////
 TNode *VarNode::load( Codegen *g ){
 	TNode *t=translate( g );
-	if( sem_type==Type::string_type ) return call( "__bbStrLoad",t );
-	return mem( t );
+	if( sem_type==Type::string_type ) return call( "__bbStrLoad",t ); // __bbStrLoad returns BBStr* (wide)
+	return mem( t,isWideType( sem_type ) ); // D4: tag pointer loads
 }
 
 TNode *VarNode::store( Codegen *g,TNode *n ){
 	TNode *t=translate( g );
 	if( sem_type->structType() ) return call( "__bbObjStore",t,n );
 	if( sem_type==Type::string_type ) return call( "__bbStrStore",t,n );
-	return move( n,mem( t ) );
+	return move( n,mem( t,isWideType( sem_type ) ) ); // D4: tag pointer stores
 }
 
 bool VarNode::isObjParam(){
@@ -37,7 +37,7 @@ TNode *DeclVarNode::translate( Codegen *g ){
 TNode *DeclVarNode::store( Codegen *g,TNode *n ){
 	if( isObjParam() ){
 		TNode *t=translate( g );
-		return move( n,mem( t ) );
+		return move( n,mem( t,true ) ); // D4: object param slot holds BBObj*
 	}
 	return VarNode::store( g,n );
 }
@@ -88,15 +88,16 @@ TNode *ArrayVarNode::translate( Codegen *g ){
 	for( int k=0;k<exprs->size();++k ){
 		TNode *e=exprs->exprs[k]->translate( g );
 		if( k ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k-1) ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k-1) ) ) ); // scale is int (not wide)
 			e=add( t,mul( e,s ) );
 		}
 		if( g->debug ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) ) ); // scale is int (not wide)
 			t=jumpge( e,s,"__bbArrayBoundsEx" );
 		}else t=e;
 	}
-	t=add( mem( global( "_a"+ident ) ),mul( t,iconst( BB_SLOT ) ) ); //BASIC array element stride
+	TNode *dataPtr=mem( global( "_a"+ident ),true ); // D4: BBArray data pointer (wide)
+	t=add( dataPtr,mul( t,iconst( BB_SLOT ) ) ); //BASIC array element stride
 	return t;
 }
 
@@ -115,7 +116,8 @@ void FieldVarNode::semant( Environ *e ){
 TNode *FieldVarNode::translate( Codegen *g ){
 	TNode *t=expr->translate( g );
 	if( g->debug ) t=jumpf( t,"__bbNullObjEx" );
-	t=mem( t );if( g->debug ) t=jumpf( t,"__bbNullObjEx" );
+	t=mem( t,true ); // D4: BBObj header pointer (wide)
+	if( g->debug ) t=jumpf( t,"__bbNullObjEx" );
 	return add( t,iconst( sem_field->offset ) );
 }
 

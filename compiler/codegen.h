@@ -26,10 +26,11 @@ struct TNode{
 	TNode *l,*r;		//args
 	int iconst;			//for CONST type_int
 	string sconst;		//for CONST type_string
+	bool wide;			//pointer-width value (x64 only, D4 in x64-plan.md)
 
-	TNode( int op,TNode *l=0,TNode *r=0 ):op(op),l(l),r(r),iconst(0){}
-	TNode( int op,TNode *l,TNode *r,int i ):op(op),l(l),r(r),iconst(i){}
-	TNode( int op,TNode *l,TNode *r,const string &s ):op(op),l(l),r(r),iconst(0),sconst(s){}
+	TNode( int op,TNode *l=0,TNode *r=0 ):op(op),l(l),r(r),iconst(0),wide(false){}
+	TNode( int op,TNode *l,TNode *r,int i ):op(op),l(l),r(r),iconst(i),wide(false){}
+	TNode( int op,TNode *l,TNode *r,const string &s ):op(op),l(l),r(r),iconst(0),sconst(s),wide(false){}
 	~TNode(){ delete l;delete r; }
 
 	void log();

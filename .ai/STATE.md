@@ -90,8 +90,20 @@
   - `typeof` renamed to `bb_typeof` in bbdump.cpp: macOS Clang reserves `typeof` even in gnu++14.
   - Mac: build OK, all 11 suites pass.
 
+## Done (Prompt 3, commit 3b)
+- TNode `wide` tagging: x64-plan.md D4 implemented.
+  - `compiler/codegen.h`: added `bool wide` to TNode (default false).
+  - Front end sets `wide=true` on pointer-width values:
+    - IR_MEM loads/stores of string/object/vector slots
+    - Internal pointer loads: BBObj fields, BBArray data pointer
+    - IR_CALL results from pointer-returning helpers (__bbObjNew, __bbStrLoad, etc.)
+  - Helper functions in `node.cpp`: `isWideType()`, `isPointerHelper()` (one explicit list).
+  - DumpCodegen: prints " W" on wide nodes; CONST 0 printed explicitly; idata/sdata/pdata labels.
+  - Regenerated `tests/x64/abitest.dump`: 16 MEM W, 2 MOVE W, 4 CALL W nodes (all pointer-width).
+  - Mac: build OK, all 11 suites pass (407+19+61+27+11+10011+26+28 = 11,590 checks, 0 failed).
+
 ## Next
-- Prompt 3 commit 3b: TNode `wide` tagging — x64-plan.md section 5
+- Prompt 3 commit 4: asmjit + skeleton backend — x64-plan.md section 5
 
 ## Blockers
 - None
