@@ -9,6 +9,7 @@
 #else
 #include <cfenv>
 #endif
+#include "bb_abi.h"
 
 //////////////////////////////////
 // Cast an expression to a type //
@@ -103,7 +104,7 @@ TNode *ExprSeqNode::translate( Codegen *g,bool cfunc ){
 		}
 
 		TNode *p;
-		p=d_new TNode( IR_ARG,0,0,k*4 );
+		p=d_new TNode( IR_ARG,0,0,k*BB_SLOT );
 		p=d_new TNode( IR_MEM,p,0 );
 		p=d_new TNode( IR_MOVE,q,p );
 		p=d_new TNode( IR_SEQ,p,0 );
@@ -176,9 +177,9 @@ TNode *CallNode::translate( Codegen *g ){
 	}
 
 	if( sem_type==Type::float_type ){
-		t=d_new TNode( IR_FCALL,l,r,exprs->size()*4 );
+		t=d_new TNode( IR_FCALL,l,r,exprs->size()*BB_SLOT );
 	}else{
-		t=d_new TNode( IR_CALL,l,r,exprs->size()*4 );
+		t=d_new TNode( IR_CALL,l,r,exprs->size()*BB_SLOT );
 	}
 
 	if( f->returnType->stringType() ){

@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "nodes.h"
+#include "bb_abi.h"
 
 static string fileLabel;
 static map<string,string> fileMap;
@@ -108,7 +109,7 @@ void DimNode::translate( Codegen *g ){
 	TNode *t;
 	g->code( call( "__bbUndimArray",global( "_a"+ident ) ) );
 	for( int k=0;k<exprs->size();++k ){
-		t=add( global( "_a"+ident ),iconst( k*4+12 ) );
+		t=add( global( "_a"+ident ),iconst( BB_ARRAY_DIMS_OFF+k*BB_SLOT ) );
 		t=move( exprs->exprs[k]->translate(g),mem( t ) );
 		g->code( t );
 	}

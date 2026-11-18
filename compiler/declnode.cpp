@@ -2,6 +2,7 @@
 #include "std.h"
 #include "nodes.h"
 #include "debugenv.h"
+#include "bb_abi.h"
 
 //////////////////////////////
 // Sequence of declarations //
@@ -148,7 +149,7 @@ void FuncDeclNode::translate( Codegen *g ){
 	g->label( sem_env->funcLabel+"_leave" );
 	t=deleteVars( sem_env );
 	if( g->debug ) t=d_new TNode( IR_SEQ,call( "__bbDebugLeave" ),t );
-	g->leave( t,sem_type->params->size()*4 );
+	g->leave( t,sem_type->params->size()*BB_SLOT );
 }
 
 //////////////////////
@@ -164,7 +165,7 @@ void StructDeclNode::proto( DeclSeq *d,Environ *e ){
 
 void StructDeclNode::semant( Environ *e ){
 	fields->proto( sem_type->fields,e );
-	for( int k=0;k<sem_type->fields->size();++k ) sem_type->fields->decls[k]->offset=k*4;
+	for( int k=0;k<sem_type->fields->size();++k ) sem_type->fields->decls[k]->offset=k*BB_FIELD_STRIDE;
 }
 
 void StructDeclNode::translate( Codegen *g ){

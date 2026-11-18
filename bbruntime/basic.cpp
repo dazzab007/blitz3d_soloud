@@ -1,6 +1,8 @@
 
 #include "std.h"
 #include "bbsys.h"
+#include "../compiler/bb_abi.h"
+#include <cstddef>
 
 //how many strings allocated
 static int stringCnt;
@@ -37,6 +39,12 @@ static BBType _bbIntType( BBTYPE_INT );
 static BBType _bbFltType( BBTYPE_FLT );
 static BBType _bbStrType( BBTYPE_STR );
 static BBType _bbCStrType( BBTYPE_CSTR );
+
+//the compiler (compiler/bb_abi.h) assumes these exact struct layouts
+static_assert( offsetof(BBArray,data)==BB_ARRAY_DATA_OFF, "BBArray data offset" );
+static_assert( offsetof(BBArray,dims)==BB_ARRAY_DIMS_OFF, "BBArray dims offset" );
+static_assert( offsetof(BBArray,scales[0])==BB_ARRAY_SCALE_OFF(0), "BBArray scales offset" );
+static_assert( sizeof(BBField)==BB_FIELD_STRIDE, "BBField stride" );
 
 static void *bbMalloc( int size ){
 	return malloc(size);

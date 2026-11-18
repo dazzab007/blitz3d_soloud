@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "nodes.h"
+#include "bb_abi.h"
 
 set<string> Node::usedfuncs;
 
@@ -53,11 +54,11 @@ int Node::enumVars( Environ *e ){
 	for( int k=0;k<e->decls->size();++k ){
 		Decl *d=e->decls->decls[k];
 		if( d->kind & DECL_PARAM ){
-			d->offset=p_size+20;
-			p_size+=4;
+			d->offset=p_size+20; //20 = x86-32 saved EBP + return address; BB_SLOT=4 on Windows
+			p_size+=BB_SLOT;
 		}else if( d->kind & DECL_LOCAL ){
-			d->offset=-4-l_size;
-			l_size+=4;
+			d->offset=-BB_SLOT-l_size;
+			l_size+=BB_SLOT;
 		}
 	}
 	return l_size;
@@ -186,13 +187,13 @@ TNode *Node::call( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 	TNode *t=0;
 	if( a0 ){
 		t=move( a0,mem( arg(0) ) );
-		size+=4;
+		size+=BB_SLOT;
 		if( a1 ){
-			t=seq( t,move( a1,mem( arg(4) ) ) );
-			size+=4;
+			t=seq( t,move( a1,mem( arg(BB_SLOT) ) ) );
+			size+=BB_SLOT;
 			if( a2 ){
-				t=seq( t,move( a2,mem( arg(8) ) ) );
-				size+=4;
+				t=seq( t,move( a2,mem( arg(2*BB_SLOT) ) ) );
+				size+=BB_SLOT;
 			}
 		}
 	}
@@ -208,13 +209,13 @@ TNode *Node::fcall( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 	TNode *t=0;
 	if( a0 ){
 		t=move( a0,mem( arg(0) ) );
-		size+=4;
+		size+=BB_SLOT;
 		if( a1 ){
-			t=seq( t,move( a1,mem( arg(4) ) ) );
-			size+=4;
+			t=seq( t,move( a1,mem( arg(BB_SLOT) ) ) );
+			size+=BB_SLOT;
 			if( a2 ){
-				t=seq( t,move( a2,mem( arg(8) ) ) );
-				size+=4;
+				t=seq( t,move( a2,mem( arg(2*BB_SLOT) ) ) );
+				size+=BB_SLOT;
 			}
 		}
 	}

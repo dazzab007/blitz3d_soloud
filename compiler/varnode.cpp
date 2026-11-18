@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "nodes.h"
+#include "bb_abi.h"
 
 //////////////////////////////////
 // Common get/set for variables //
@@ -87,15 +88,15 @@ TNode *ArrayVarNode::translate( Codegen *g ){
 	for( int k=0;k<exprs->size();++k ){
 		TNode *e=exprs->exprs[k]->translate( g );
 		if( k ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( k*4+8 ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_SCALE_OFF(k) ) ) );
 			e=add( t,mul( e,s ) );
 		}
 		if( g->debug ){
-			TNode *s=mem( add( global( "_a"+ident ),iconst( k*4+12 ) ) );
+			TNode *s=mem( add( global( "_a"+ident ),iconst( BB_ARRAY_DIMS_OFF+k*BB_SLOT ) ) );
 			t=jumpge( e,s,"__bbArrayBoundsEx" );
 		}else t=e;
 	}
-	t=add( mem( global( "_a"+ident ) ),mul( t,iconst( 4 ) ) );
+	t=add( mem( global( "_a"+ident ) ),mul( t,iconst( BB_SLOT ) ) ); //BASIC array element stride
 	return t;
 }
 
