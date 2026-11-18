@@ -124,7 +124,7 @@ void FuncDeclNode::semant( Environ *e ){
 void FuncDeclNode::translate( Codegen *g ){
 
 	//var offsets
-	int size=enumVars( sem_env );
+	int size=enumVars( sem_env,g );
 
 	//enter function
 	g->enter( "_f"+ident,size );

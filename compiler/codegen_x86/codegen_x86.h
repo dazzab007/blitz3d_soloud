@@ -8,6 +8,8 @@ public:
 	Codegen_x86( ostream &out,bool debug );
 
 	virtual void enter( const string &l,int frameSize );
+	virtual int argOffset( int k );
+	virtual int localOffset( int k );
 	virtual void code( TNode *code );
 	virtual void leave( TNode *cleanup,int pop_sz );
 	virtual void label( const string &l );

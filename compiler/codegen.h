@@ -42,6 +42,11 @@ public:
 	Codegen( ostream &out,bool debug ):out( out ),debug( debug ){}
 
 	virtual void enter( const string &l,int frameSize )=0;
+	//frame layout: byte offset of parameter k (stack slot, read via [esp+off] on x86-32)
+	//and local k (relative to the frame base register). Backends must keep these
+	//consistent with the addressing they emit for IR_ARG / IR_LOCAL.
+	virtual int argOffset( int k )=0;
+	virtual int localOffset( int k )=0;
 	virtual void code( TNode *code )=0;
 	virtual void leave( TNode *cleanup,int pop_sz )=0;
 	virtual void label( const string &l )=0;

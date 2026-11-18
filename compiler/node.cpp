@@ -48,20 +48,18 @@ ConstNode *Node::constValue( Type *ty ){
 ///////////////////////////////////////////////////////
 // work out var offsets - return size of local frame //
 ///////////////////////////////////////////////////////
-int Node::enumVars( Environ *e ){
-	//calc offsets
-	int p_size=0,l_size=0;
+int Node::enumVars( Environ *e,Codegen *g ){
+	//calc offsets - the backend owns the frame layout (D6 in x64-plan.md)
+	int p_cnt=0,l_cnt=0;
 	for( int k=0;k<e->decls->size();++k ){
 		Decl *d=e->decls->decls[k];
 		if( d->kind & DECL_PARAM ){
-			d->offset=p_size+20; //20 = x86-32 saved EBP + return address; BB_SLOT=4 on Windows
-			p_size+=BB_SLOT;
+			d->offset=g->argOffset( p_cnt++ );
 		}else if( d->kind & DECL_LOCAL ){
-			d->offset=-BB_SLOT-l_size;
-			l_size+=BB_SLOT;
+			d->offset=g->localOffset( l_cnt++ );
 		}
 	}
-	return l_size;
+	return l_cnt*BB_SLOT;
 }
 
 //////////////////////////////

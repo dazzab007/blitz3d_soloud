@@ -34,7 +34,7 @@ void ProgNode::translate( Codegen *g,const vector<UserFunc> &usrfuncs ){
 	if( g->debug ) g->s_data( stmts->file,file_lab );
 
 	//enumerate locals
-	int size=enumVars( sem_env );
+	int size=enumVars( sem_env,g );
 
 	//'Main' label
 	g->enter( "__MAIN",size );

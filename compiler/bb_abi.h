@@ -26,4 +26,9 @@
 //BBObj field stride: fields are a 1-ptr-aligned array of BBField.
 #define BB_FIELD_STRIDE		BB_SLOT
 
+//Frame layout is owned by the backend: Codegen::argOffset(k) / localOffset(k).
+//On x86-32 (Windows) params sit at saved EBP + return address + k*BB_SLOT and
+//locals at frame_base -(k+1)*BB_SLOT; codegen_x86 returns exactly those values,
+//so Windows output is unchanged. On x86-64 the layout comes from codegen_x64.
+
 #endif

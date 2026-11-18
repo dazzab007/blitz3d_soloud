@@ -47,3 +47,8 @@
 - d: gx_scene stub added to stubs_gxruntime.cpp (guarded by STUBS_NO_BLITZ3D_OPEN_CLOSE) for test targets that link blitz3d lib but not bbblitz3d.cpp
 - d: bbClearWorld does NOT free graphics context canvases (front/back) — only entities, brushes, textures. Test expects non-canvas entries to be zero, not by_ptr.empty()
 debugenv table growable (vector, index+1 ids; 5000-env test) — fixed 1024 cap would silently drop debug env ids in large programs
+- x64 c1: bb_abi.h lives in compiler/ (shared by front end and bbruntime via relative include); BB_SLOT is a #define not a const — it's used in preprocessor-free contexts only, but macros match the existing codebase style for layout constants
+- x64 c1: node.cpp enumVars keeps the +20 param base (x86-32 saved EBP + return address) with a comment; commit 2 moves frame bases to Codegen hooks per plan D6
+- x64 c1: exprnode.cpp `iconst(4)` at the void* userlib deref left untouched — it's a pointer-width site for the x64 backend (commit 3/4), not a BBArray/BBObj layout constant, and the plan lists it under D4 tagging
+- x64 c2: frame hooks argOffset/localOffset are pure virtual on Codegen; enumVars takes the Codegen (declnode.cpp/prognode.cpp both already have g) — front end no longer hard-codes +20/-4
+- x64 c2: BB_ARG_BASE_OFF dropped from bb_abi.h (first attempt #error'd on macOS since codegen_x86 compiles there too); the 20 lives only in Codegen_x86::argOffset where it belongs

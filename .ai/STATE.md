@@ -62,8 +62,26 @@
 - debugenv: fixed 1024-slot table → growable `vector<Environ*>` (compiler/debugenv.cpp); ids stay index+1.
 - test_debugenv: 5000-env block (id assignment + round-trip for all). 10011 checks, 0 failed. All 8 Mac suites pass.
 
+## Done (Prompt 3, commit 1)
+- ABI constants `6bba566` — Windows CI green.
+  - New compiler/bb_abi.h: BB_SLOT (4 Win / 8 macOS), BB_ARRAY_DATA_OFF/DIMS_OFF/SCALE_OFF(k), BB_FIELD_STRIDE.
+  - Front end uses them (identical values on Windows): node.cpp enumVars + call/fcall arg offsets/sizes;
+    declnode.cpp leave pop size + Type field offsets; exprnode.cpp cfunc args + CALL/FCALL sizes;
+    varnode.cpp/stmtnode.cpp BBArray header offsets + element stride.
+  - bbruntime/basic.cpp static_asserts offsetof(BBArray) fields and sizeof(BBField) against the constants.
+  - Mac: build OK, all 8 suites pass (407+26+28+11+27+19+10011+61).
+  - PC identical-exe check (old vs new blitzcc on a sample .bb) NOT done: blitzcc is not in the portable
+    Mac build (top-level CMakeLists returns before add_subdirectory(blitz)). Needs a Windows machine or
+    the PC CI step from the plan.
+
+## Done (Prompt 3, commit 2)
+- Frame hooks: Codegen::argOffset(k)/localOffset(k) pure virtual; Codegen_x86 returns 20+k*BB_SLOT / -BB_SLOT*(k+1) (today's values).
+  - node.cpp enumVars(Environ*,Codegen*) uses the hooks; declnode.cpp + prognode.cpp pass g.
+  - Windows output unchanged by construction: same int values reach the same TNodes → identical asm (CI baseline compares).
+  - Mac: build OK, all 11 suites pass. PC identical-exe check: CI asm-baseline comparison is the equivalent proof.
+
 ## Next
-- Prompt 3: x86-64 codegen (sockets deferred until .bb programs run on macOS)
+- Prompt 3 commit 3: TNode `wide` tagging — x64-plan.md section 5
 
 ## Blockers
 - None

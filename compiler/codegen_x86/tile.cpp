@@ -1,5 +1,6 @@
 
 #include "../std.h"
+#include "../bb_abi.h"	//BB_SLOT
 #include "codegen_x86.h"
 #include "tile.h"
 
@@ -185,6 +186,16 @@ void Codegen_x86::enter( const string &l,int frameSize ){
 	inCode=true;
 	::frameSize=maxFrameSize=frameSize;
 	codeFrags.clear();funcLabel=l;
+}
+
+//x86-32 frame: params at [esp+20+k*4] (saved EBP + return address),
+//locals at [ebp-(k+1)*4]. Must match the IR_ARG / IR_LOCAL addressing above.
+int Codegen_x86::argOffset( int k ){
+	return 20+k*BB_SLOT;	//20 = x86-32 saved EBP + return address
+}
+
+int Codegen_x86::localOffset( int k ){
+	return -BB_SLOT*(k+1);
 }
 
 void Codegen_x86::code( TNode *stmt ){

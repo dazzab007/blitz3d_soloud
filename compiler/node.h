@@ -28,7 +28,7 @@ struct Node{
 	static TNode *compare( int op,TNode *l,TNode *r,Type *ty );
 	static ConstNode *constValue( Type *ty );
 
-	static int enumVars( Environ *e );
+	static int enumVars( Environ *e,Codegen *g );
 	static Type *tagType( const string &s,Environ *e );
 
 	static TNode *createVars( Environ *e );
