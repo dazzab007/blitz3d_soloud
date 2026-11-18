@@ -17,11 +17,14 @@ jobs:
         shell: cmd
         run: |
           set blitzpath=%CD%\BLITZ3D_INSTALL
-          pushd tests\asm_baseline
+          cd tests\asm_baseline
+          dir
+          dir ..\..\BLITZ3D_INSTALL\bin
           ..\..\BLITZ3D_INSTALL\bin\blitzcc.exe -a -c abitest.bb > abitest.out
+          echo "blitzcc exit: %ERRORLEVEL%"
+          dir abitest.out
           ..\..\BLITZ3D_INSTALL\bin\blitzcc.exe -a -c -d abitest.bb > abitest_d.out
-          popd
-          if not exist tests\asm_baseline\abitest.out (echo "abitest.out missing - blitzcc failed" & exit /b 1)
-          if not exist tests\asm_baseline\abitest_d.out (echo "abitest_d.out missing - blitzcc failed" & exit /b 1)
+          echo "blitzcc -d exit: %ERRORLEVEL%"
+          cd ..\..
           git diff --no-index --exit-code tests/asm_baseline/abitest.txt abitest.out || exit /b 1
           git diff --no-index --exit-code tests/asm_baseline/abitest_d.txt abitest_d.out || exit /b 1
