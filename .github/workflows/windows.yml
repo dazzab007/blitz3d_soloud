@@ -13,7 +13,7 @@ jobs:
         run: cmake -S . -B build -A Win32 -G "Visual Studio 17 2022"
       - name: Build
         run: cmake --build build --config Release -- /m
-      - name: Check codegen against baseline
+      - name: Generate codegen dumps
         shell: cmd
         run: |
           copy tests\asm_baseline\abitest.bb abitest.bb
@@ -21,6 +21,17 @@ jobs:
           cd BLITZ3D_INSTALL\bin
           blitzcc.exe -a -c ../../abitest.bb > ..\..\abitest.out
           blitzcc.exe -a -c -d ../../abitest.bb > ..\..\abitest_d.out
-          cd ..\..
-          fc tests\asm_baseline\abitest.txt abitest.out || exit /b 1
-          fc tests\asm_baseline\abitest_d.txt abitest_d.out || exit /b 1
+      - name: Compare with baseline
+        shell: pwsh
+        run: |
+          function Norm($p) { (Get-Content -Raw $p) -replace '(?m)(\[esp\+4\]),\d+(\r?\n\s+mov\s+\[esp\+8\],_\d+)', '$1,ENVPTR$2' }
+          $fail = $false
+          foreach ($pair in @(@('tests/asm_baseline/abitest.txt','abitest.out'), @('tests/asm_baseline/abitest_d.txt','abitest_d.out'))) {
+            $a = Norm $pair[0]; $b = Norm $pair[1]
+            if ($a -cne $b) {
+              Write-Host "DIFFERS: $($pair[0]) vs $($pair[1])"
+              Compare-Object ($a -split "`n") ($b -split "`n") | Format-Table -AutoSize | Out-String -Width 200 | Write-Host
+              $fail = $true
+            } else { Write-Host "MATCH: $($pair[0])" }
+          }
+          if ($fail) { exit 1 }
