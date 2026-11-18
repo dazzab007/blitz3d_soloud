@@ -17,7 +17,8 @@ jobs:
         shell: cmd
         run: |
           set blitzpath=%CD%\BLITZ3D_INSTALL
-          BLITZ3D_INSTALL\bin\blitzcc.exe -a -c tests\asm_baseline\abitest.bb > abitest.out
-          BLITZ3D_INSTALL\bin\blitzcc.exe -a -c -d tests\asm_baseline\abitest.bb > abitest_d.out
+          copy /y tests\asm_baseline\abitest.bb abitest.bb >nul
+          BLITZ3D_INSTALL\bin\blitzcc.exe -a -c abitest.bb > abitest.out
+          BLITZ3D_INSTALL\bin\blitzcc.exe -a -c -d abitest.bb > abitest_d.out
           git diff --no-index --exit-code tests/asm_baseline/abitest.txt abitest.out || exit /b 1
           git diff --no-index --exit-code tests/asm_baseline/abitest_d.txt abitest_d.out || exit /b 1
