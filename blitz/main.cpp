@@ -203,6 +203,10 @@ int _cdecl main( int argc,char *argv[] ){
 		in_file=in_file.substr( 1,in_file.size()-2 );
 	}
 
+	//Resolve to an absolute path so the "Compiling" banner (and error messages)
+	//are independent of the current working directory.
+	if( string f=fullfilename( in_file ) ) in_file=f;
+
 	ifstream in( in_file.c_str() );
 	if( !in ) err( "Unable to open input file" );
 	if( !quiet ){
