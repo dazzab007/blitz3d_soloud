@@ -129,3 +129,12 @@ waits for Prompt 4, since userlibs need `dlopen` anyway.
 - Never edit `compiler/assem_x86/asm_insts.cpp`.
 - No `.bb` program runs end to end until Prompt 4. Harness tests are the proof.
 - If a step needs a design decision not covered here, stop and ask.
+
+## 7. Wide-tag rules (settled in commits 3b/3c)
+
+- Store width = the destination `IR_MEM`'s `wide` flag. `MOVE W` is informational only.
+- Call arguments (`MEM ARG k`): the backend passes the full 64-bit value of the source expression; callees read ints from the low 32 bits.
+- `RETURN` width is inferred from the returned expression; a `CONST 0` return in a pointer-returning function is fine (32-bit mov zero-extends).
+- `__bbObjEachFirst/Next`, `__bbObjToHandle`, `__bbObjDelete` are int/void: not wide. `__bbObjFromHandle`, `__bbObjNew`, `__bbStr*` producers, runtime `$` functions and user functions returning string/object are `CALL W`.
+- Commit 8: type descriptors (e.g. `_tthing`) currently emit null pointer fields as `idata 0`. On x86-64 every pointer field must be an 8-byte `pdata`, with padding matching the runtime `BBObjType`/`BBObj` layout (static_assert the offsets).
+- Coverage proof: `tests/x64/widetest.bb` / `widetest.dump` (objects, strings, arrays of both, Each, Handle/Object, Delete, user and runtime functions returning pointers).

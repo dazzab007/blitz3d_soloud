@@ -186,22 +186,27 @@ label _3
 CALL 8
   GLOBAL "_fprint"
   SEQ
-    MOVE
-      MEM
-        ADD
-          MEM W
-            GLOBAL "_agrid"
-          MUL
+    MOVE W
+      CALL 8 W
+        GLOBAL "__bbStrFromInt"
+        MOVE
+          MEM
             ADD
-              CONST 2
+              MEM W
+                GLOBAL "_agrid"
               MUL
-                CONST 3
-                MEM
-                  ADD
-                    GLOBAL "_agrid"
-                    CONST 16
-            CONST 8
-      MEM
+                ADD
+                  CONST 2
+                  MUL
+                    CONST 3
+                    MEM
+                      ADD
+                        GLOBAL "_agrid"
+                        CONST 16
+                CONST 8
+          MEM
+            ARG
+      MEM W
         ARG
 RET
 label _2_leave

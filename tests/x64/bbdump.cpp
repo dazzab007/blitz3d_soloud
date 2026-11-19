@@ -24,8 +24,9 @@ struct RtSym{
 
 static const RtSym rtSyms[] = {
 	//runtime functions the sample programs call
-	{ "Print", 0, "%$#" },
+	{ "Print", 0, "$"  },
 	{ "Len",   '%', "$"  },
+	{ "Left",  '$', "$%" },
 	{ 0, 0, 0 }
 };
 
@@ -60,8 +61,9 @@ static Environ *makeRuntimeEnviron(){
 	Environ *e=d_new Environ( "",Type::int_type,0,0 );
 	for( const RtSym *s=rtSyms;s->name;++s ){
 		DeclSeq *params=d_new DeclSeq();
-		for( const char *p=s->params;*p;++p )
-			params->insertDecl( "a",bb_typeof( *p ),DECL_PARAM );
+		int k=0;
+		for( const char *p=s->params;*p;++p,++k )
+			params->insertDecl( "a"+itoa( k ),bb_typeof( *p ),DECL_PARAM );
 		e->funcDecls->insertDecl( tolower( s->name ),d_new FuncType( bb_typeof( s->ret ),params,false,false ),DECL_FUNC );
 	}
 	for( const char **n=rtInternals;*n;++n )
