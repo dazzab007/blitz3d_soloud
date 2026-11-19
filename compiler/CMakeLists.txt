@@ -7,8 +7,8 @@ if(BB_PORTABLE_BUILD)
 	include(FetchContent)
 	FetchContent_Declare(asmjit
 			GIT_REPOSITORY https://github.com/asmjit/asmjit.git
-			GIT_TAG master
-			GIT_SHALLOW TRUE
+			GIT_TAG 677a10bac2c24f7e068cf1f9e675bf51c7b534ea  # pinned 2026-11-19
+			GIT_SHALLOW FALSE
 			EXCLUDE_FROM_ALL
 	)
 	FetchContent_MakeAvailable(asmjit)

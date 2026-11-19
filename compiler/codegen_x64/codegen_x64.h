@@ -25,6 +25,9 @@ public:
 	virtual void align_data( int n );
 	virtual void flush();
 
+	//Direct access to the assembler (tests, and tiles in commit 5+).
+	asmjit::x86::Assembler &as(){ return m_asm; }
+
 private:
 	asmjit::CodeHolder *m_holder;
 	asmjit::x86::Assembler m_asm;

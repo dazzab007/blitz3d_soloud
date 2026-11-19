@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
+#include <cstdint>
 
 X64Module::X64Module(){}
 X64Module::~X64Module(){}
@@ -82,11 +84,40 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 	//Copy code.
 	std::memcpy( mem,mod.code(),sz );
 
-	//Apply relocations.
-	//We need access to the reloc list, but X64Module doesn't expose it publicly.
-	//For now, we'll skip reloc application in this skeleton; the test program
-	//doesn't use relocs (it's just mov eax,42; ret).
-	//Commit 5+ will add proper reloc support.
+	//Apply relocations: module symbols first, then the stub table.
+	uint8_t *base=(uint8_t*)mem;
+	for( size_t i=0;i<mod.relocs().size();++i ){
+		const Reloc &r=mod.relocs()[i];
+		uint64_t target;
+		int off;
+		if( mod.findSymbol( r.sym.c_str(),&off ) ){
+			target=(uint64_t)(base+off);
+		}else{
+			std::map<std::string,void*>::const_iterator it=stubTable.find( r.sym );
+			if( it==stubTable.end() ){
+				fprintf( stderr,"harness: unresolved symbol %s\n",r.sym.c_str() );
+				munmap( mem,mapSize );
+				return nullptr;
+			}
+			target=(uint64_t)it->second;
+		}
+		if( r.kind==ABS64 ){
+			std::memcpy( base+r.offset,&target,8 );
+		}else if( r.kind==REL32 ){
+			int64_t d=(int64_t)target-(int64_t)(uint64_t)(base+r.offset+4);
+			if( d<INT32_MIN || d>INT32_MAX ){
+				fprintf( stderr,"harness: REL32 to %s out of range\n",r.sym.c_str() );
+				munmap( mem,mapSize );
+				return nullptr;
+			}
+			int32_t d32=(int32_t)d;
+			std::memcpy( base+r.offset,&d32,4 );
+		}else{
+			fprintf( stderr,"harness: ABS32 reloc to %s not valid on x86-64\n",r.sym.c_str() );
+			munmap( mem,mapSize );
+			return nullptr;
+		}
+	}
 
 	//mprotect RX.
 	if( mprotect( mem,mapSize,PROT_READ|PROT_EXEC )!=0 ){
@@ -98,6 +129,12 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 	m_mem=mem;
 	m_size=mapSize;
 	return mem;
+}
+
+void *X64Loader::symbol( const X64Module &mod,const char *sym )const{
+	int off;
+	if( !m_mem || !mod.findSymbol( sym,&off ) ) return nullptr;
+	return (uint8_t*)m_mem+off;
 }
 
 void X64Loader::free(){

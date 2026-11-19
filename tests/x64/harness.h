@@ -21,7 +21,7 @@ enum RelocKind{
 
 struct Reloc{
 	int offset;		//byte offset in the code buffer where the reloc applies
-	const char *sym;	//symbol name to resolve
+	std::string sym;	//symbol name to resolve (owned copy)
 	RelocKind kind;
 };
 
@@ -52,6 +52,9 @@ public:
 	//Look up a symbol's offset in the code buffer. Returns false if not found.
 	bool findSymbol( const char *sym,int *offset )const;
 
+	//Relocations recorded so far (applied by X64Loader).
+	const std::vector<Reloc> &relocs()const{ return m_relocs; }
+
 	//Access the raw code buffer.
 	const uint8_t *code()const{ return m_code.data(); }
 	int size()const{ return (int)m_code.size(); }
@@ -69,13 +72,17 @@ public:
 	X64Loader();
 	~X64Loader();
 
-	//Load the module: mmap RW, copy code, apply relocs against stubTable,
-	//mprotect RX. Returns a callable pointer to the entry point (offset 0),
-	//or nullptr on failure. The caller must call free() when done.
+	//Load the module: mmap RW, copy code, apply relocs (symbols defined in
+	//the module first, then stubTable), mprotect RX. Returns a callable
+	//pointer to the entry point (offset 0), or nullptr on failure (unknown
+	//symbol, REL32 out of range, ABS32 on x86-64). Call free() when done.
 	void *load( const X64Module &mod,const std::map<std::string,void*> &stubTable );
 
 	//Free the mapped memory.
 	void free();
+
+	//Address of a module symbol after load(), or nullptr.
+	void *symbol( const X64Module &mod,const char *sym )const;
 
 private:
 	void *m_mem;		//mapped memory (RW then RX)

@@ -55,3 +55,5 @@ debugenv table growable (vector, index+1 ids; 5000-env test) — fixed 1024 cap 
 - x64 c3a: bbdump lives in tests/x64/ but is added to CMake from bbruntime/CMakeLists.txt portable block (the existing home for portable test executables); links the compiler lib target
 - x64 c3a: DumpCodegen argOffset/localOffset return x86-32 values (20+k*4, -4*(k+1)) per prompt; the x64 backend will override with its own layout
 - x64 c3a: bbdump.cpp must include compiler/std.h before any front-end header — they use bare string/istream/vector without #include <string> themselves (compiler/*.cpp always include std.h first)
+- asmjit pinned to 677a10bac2c24f7e068cf1f9e675bf51c7b534ea (master HEAD, 2026-11-19); bump deliberately, never track master.
+- Harness relocs: module symbols resolve first, then the stub table; REL32 range-checked; ABS32 rejected on x86-64. ABS64 placeholders use a large imm so asmjit emits the 10-byte movabs (imm64 = last 8 bytes).
