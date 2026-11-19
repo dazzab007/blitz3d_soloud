@@ -10,8 +10,17 @@
 //the destination MEM's wide flag.
 //
 //Frame: push rbp; mov rbp,rsp; sub rsp,align16(frameSize). Locals at
-//[rbp-8*(k+1)]. Params at [rbp+16+8*k] for now; commit 6 decides the
-//Blitz->Blitz call convention and parameter homing.
+//[rbp-8*(k+1)], params at [rbp+16+8*k].
+//
+//Calls (x64-plan.md D5, commit 6). The front end writes every argument to
+//an outgoing area (IR_ARG k*8) and the CALL node's sconst says how to pass
+//them:
+//  ""        Blitz function: the area stays at [rsp] for the callee, which
+//            reads its params at [rbp+16+8*k]. No register homing needed.
+//  "C" cls   C function (runtime, userlib), System V: arg k goes in the
+//            next GP register ('i') or XMM register ('f'); the rest are
+//            copied, in order, to [rsp+8*j] below the area.
+//rsp is 16-byte aligned at every call; m_depth tracks what is pushed.
 
 #include "codegen_x64.h"
 #include "../bb_abi.h"
@@ -135,7 +144,7 @@ bool Codegen_x64::isWide( TNode *t ){
 	case IR_NEG:case IR_SHL:case IR_SHR:case IR_SAR:
 		return isWide( t->l );
 	case IR_SEQ:
-		return isWide( t->r );
+		return t->r ? isWide( t->r ) : isWide( t->l );
 	default:
 		return false;
 	}
@@ -193,6 +202,7 @@ void Codegen_x64::condJump( TNode *t,bool negate ){
 }
 
 void Codegen_x64::stmt( TNode *t ){
+	if( !t ) return;	//arg lists end in SEQ(x,0)
 	switch( t->op ){
 	case IR_SEQ:
 		stmt( t->l );
@@ -217,11 +227,24 @@ void Codegen_x64::stmt( TNode *t ){
 		else m_asm.cmp( eax,ecx );
 		Label skip=m_asm.new_label();
 		m_asm.j( CondCode::kB,skip );
+		//The routine never returns; call it (aligned) so it gets a normal
+		//entry stack and a return address for backtraces.
+		if( m_depth&15 ) m_asm.sub( rsp,8 );
 		movAbs64( t->sconst );
-		m_asm.jmp( rax );
+		m_asm.call( rax );
 		m_asm.bind( skip );
 		return;
 	}
+	case IR_JSR:
+		//Gosub: the subroutine runs in this frame with the return address
+		//pushed; pad by 8 so its statements still see a 16-aligned rsp.
+		m_asm.sub( rsp,8 );
+		m_asm.call( getLabel( t->sconst ) );
+		m_asm.add( rsp,8 );
+		return;
+	case IR_RET:
+		m_asm.ret();
+		return;
 	case IR_RETURN:
 		if( t->l ) eval( t->l );
 		m_asm.jmp( getLabel( t->sconst ) );
@@ -249,9 +272,9 @@ void Codegen_x64::eval( TNode *t ){
 
 	case IR_MEM:{
 		bool w=t->wide;
-		if( t->l->op==IR_LOCAL ){
-			if( w ) m_asm.mov( rax,qword_ptr( rbp,t->l->iconst ) );
-			else m_asm.mov( eax,dword_ptr( rbp,t->l->iconst ) );
+		Mem m;
+		if( directMem( t->l,w,m ) ){
+			m_asm.mov( w ? rax : eax,m );
 			return;
 		}
 		evalAs( t->l,true );
@@ -266,9 +289,9 @@ void Codegen_x64::eval( TNode *t ){
 		if( !dst || dst->op!=IR_MEM ){ fail();return; }
 		bool w=dst->wide;
 		evalAs( t->l,w );
-		if( dst->l->op==IR_LOCAL ){
-			if( w ) m_asm.mov( qword_ptr( rbp,dst->l->iconst ),rax );
-			else m_asm.mov( dword_ptr( rbp,dst->l->iconst ),eax );
+		Mem m;
+		if( directMem( dst->l,w,m ) ){
+			m_asm.mov( m,w ? rax : eax );
 			return;
 		}
 		push();
@@ -281,6 +304,7 @@ void Codegen_x64::eval( TNode *t ){
 	}
 
 	case IR_SEQ:
+		if( !t->r ){ eval( t->l );return; }
 		stmt( t->l );
 		eval( t->r );
 		return;
@@ -378,6 +402,17 @@ void Codegen_x64::eval( TNode *t ){
 		return;
 	}
 
+	case IR_ARG:{
+		Mem m;
+		directMem( t,true,m );
+		m_asm.lea( rax,m );
+		return;
+	}
+
+	case IR_CALL:
+		callNode( t );
+		return;
+
 	case IR_SETEQ:case IR_SETNE:case IR_SETLT:case IR_SETGT:case IR_SETLE:case IR_SETGE:
 		evalCompare( t );
 		m_asm.set( relopCond( t->op ),al );
@@ -385,6 +420,7 @@ void Codegen_x64::eval( TNode *t ){
 		return;
 
 	case IR_JUMP:case IR_JUMPT:case IR_JUMPF:case IR_JUMPGE:case IR_RETURN:
+	case IR_JSR:case IR_RET:
 		stmt( t );
 		return;
 
@@ -392,6 +428,91 @@ void Codegen_x64::eval( TNode *t ){
 		fprintf( stderr,"codegen_x64: unsupported IR op %d\n",t->op );
 		fail();
 		return;
+	}
+}
+
+//Addresses that need no register: [rbp+k] for LOCAL, [rsp+k] for ARG.
+bool Codegen_x64::directMem( TNode *addr,bool wide,Mem &m ){
+	int sz=wide ? 8 : 4;
+	if( addr->op==IR_LOCAL ){
+		m=ptr( rbp,addr->iconst,sz );
+		return true;
+	}
+	if( addr->op==IR_ARG ){
+		if( m_areas.empty() ){
+			fprintf( stderr,"codegen_x64: IR_ARG outside a call\n" );
+			fail();
+			m=ptr( rsp,0,sz );
+			return true;
+		}
+		const ArgArea &a=m_areas.back();
+		m=ptr( rsp,(m_depth-a.depth)+a.base+addr->iconst,sz );
+		return true;
+	}
+	return false;
+}
+
+void Codegen_x64::callNode( TNode *t ){
+	static const Gp gpArgs[6]={ rdi,rsi,rdx,rcx,r8,r9 };
+	bool cconv=t->sconst.size() && t->sconst[0]=='C';
+	int nargs=t->iconst/BB_SLOT;
+	if( cconv && (int)t->sconst.size()-1!=nargs ){
+		fprintf( stderr,"codegen_x64: call class string '%s' does not match %d args\n",
+			t->sconst.c_str(),nargs );
+		fail();
+		return;
+	}
+
+	//C convention: classify, count stack-passed (overflow) args.
+	std::vector<int> where( nargs,0 );	//>=0 GP/XMM reg index, <0 -(overflow slot+1)
+	int novf=0;
+	if( cconv ){
+		int ngp=0,nfp=0;
+		for( int k=0;k<nargs;++k ){
+			bool f=t->sconst[k+1]=='f';
+			if( f && nfp<8 ) where[k]=nfp++;
+			else if( !f && ngp<6 ) where[k]=ngp++;
+			else where[k]=-(++novf);
+		}
+	}
+
+	//Outgoing area, 16-aligned at the call.
+	int area=t->iconst+novf*8;
+	int total=area+((16-((m_depth+area)&15))&15);
+	if( total ){
+		m_asm.sub( rsp,Imm( total ) );
+		m_depth+=total;
+	}
+	ArgArea a;
+	a.depth=m_depth;
+	a.base=novf*8;
+	m_areas.push_back( a );
+	if( t->r ) stmt( t->r );
+	m_areas.pop_back();
+
+	//Target into rax (only rax is used, so arg registers are still free).
+	if( t->l->op==IR_GLOBAL ) movAbs64( t->l->sconst );
+	else evalAs( t->l,true );
+
+	if( cconv ){
+		for( int k=0;k<nargs;++k ){
+			int src=novf*8+k*8;
+			bool f=t->sconst[k+1]=='f';
+			if( where[k]>=0 ){
+				if( f ) m_asm.movd( xmm( where[k] ),dword_ptr( rsp,src ) );
+				else m_asm.mov( gpArgs[where[k]],qword_ptr( rsp,src ) );
+			}else{
+				int dst=(-where[k]-1)*8;
+				m_asm.mov( r11,qword_ptr( rsp,src ) );
+				m_asm.mov( qword_ptr( rsp,dst ),r11 );
+			}
+		}
+	}
+	m_asm.call( rax );
+
+	if( total ){
+		m_asm.add( rsp,Imm( total ) );
+		m_depth-=total;
 	}
 }
 
@@ -410,7 +531,7 @@ void Codegen_x64::enter( const string &l,int frameSize ){
 }
 
 int Codegen_x64::argOffset( int k ){
-	return 16+k*BB_SLOT;	//saved rbp + return address; commit 6 may change this
+	return 16+k*BB_SLOT;	//saved rbp + return address (Blitz call convention)
 }
 
 int Codegen_x64::localOffset( int k ){
@@ -427,6 +548,7 @@ void Codegen_x64::code( TNode *t ){
 	delete t;
 }
 
+//pop_sz is ignored: the caller frees the outgoing area (Blitz convention).
 void Codegen_x64::leave( TNode *cleanup,int pop_sz ){
 	if( cleanup ){
 		//rax holds the return value; keep it (and 16-byte alignment).

@@ -1,11 +1,11 @@
 func __MAIN frame=32
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbRestore"
   MOVE
     GLOBAL "__DATA"
     MEM
       ARG
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbLoadLibs"
   MOVE
     GLOBAL "__LIBS"
@@ -27,7 +27,7 @@ MOVE
       LOCAL -12
   MEM W
     LOCAL -16
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbUndimArray"
   MOVE
     GLOBAL "_anames"
@@ -39,7 +39,7 @@ MOVE
     ADD
       GLOBAL "_anames"
       CONST 16
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbDimArray"
   MOVE
     GLOBAL "_anames"
@@ -50,7 +50,7 @@ idata "0" label=_anames
 idata "3"
 idata "1"
 idata "0"
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbUndimArray"
   MOVE
     GLOBAL "_anodes"
@@ -62,7 +62,7 @@ MOVE
     ADD
       GLOBAL "_anodes"
       CONST 16
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbDimArray"
   MOVE
     GLOBAL "_anodes"
@@ -73,7 +73,7 @@ idata "0" label=_anodes
 idata "5"
 idata "1"
 idata "0"
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -90,7 +90,7 @@ CALL 16
               ARG
       MEM
         ARG 8
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -111,7 +111,7 @@ CALL 16
               ARG
       MEM
         ARG 8
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbStrStore"
   SEQ
     MOVE
@@ -134,7 +134,7 @@ CALL 16
               ARG
       MEM
         ARG 8
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -156,7 +156,7 @@ CALL 16
       MEM
         ARG 8
 JUMPF "_3"
-  CALL 16
+  CALL 16 "Cii"
     GLOBAL "__bbObjEachFirst"
     SEQ
       MOVE
@@ -168,15 +168,15 @@ JUMPF "_3"
         MEM
           ARG 8
 label _6
-CALL 8
+CALL 8 "Ci"
   GLOBAL "_fprint"
   SEQ
     MOVE W
-      CALL 16 W
+      CALL 16 "Cii" W
         GLOBAL "_fleft"
         SEQ
           MOVE W
-            CALL 8 W
+            CALL 8 "Ci" W
               GLOBAL "__bbStrLoad"
               MOVE
                 ADD
@@ -196,7 +196,7 @@ CALL 8
       MEM W
         ARG
 JUMPT "_6"
-  CALL 8
+  CALL 8 "Ci"
     GLOBAL "__bbObjEachNext"
     MOVE
       LOCAL -8
@@ -204,7 +204,7 @@ JUMPT "_6"
         ARG
 label _3
 MOVE
-  CALL 8
+  CALL 8 "Ci"
     GLOBAL "__bbObjToHandle"
     MOVE
       MEM W
@@ -213,7 +213,7 @@ MOVE
         ARG
   MEM
     LOCAL -12
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -221,7 +221,7 @@ CALL 16
       MEM
         ARG
     MOVE
-      CALL 16 W
+      CALL 16 "Cii" W
         GLOBAL "__bbObjFromHandle"
         SEQ
           MOVE
@@ -235,7 +235,7 @@ CALL 16
               ARG 8
       MEM
         ARG 8
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbObjDelete"
   MOVE
     MEM W
@@ -246,11 +246,11 @@ CALL 8
         CONST 8
     MEM
       ARG
-CALL 8
+CALL 8 "Ci"
   GLOBAL "_fprint"
   SEQ
     MOVE W
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbStrLoad"
         MOVE
           ADD
@@ -267,7 +267,7 @@ RET
 label _2_leave
 cleanup:
   SEQ
-    CALL 8
+    CALL 8 "Ci"
       GLOBAL "__bbObjRelease"
       MOVE
         MEM W
@@ -275,7 +275,7 @@ cleanup:
         MEM
           ARG
     SEQ
-      CALL 8
+      CALL 8 "Ci"
         GLOBAL "__bbObjRelease"
         MOVE
           MEM W
@@ -283,7 +283,7 @@ cleanup:
           MEM
             ARG
       SEQ
-        CALL 8
+        CALL 8 "Ci"
           GLOBAL "__bbObjRelease"
           MOVE
             MEM W
@@ -312,7 +312,7 @@ MOVE
   CONST 0
   MEM W
     LOCAL -4
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -320,7 +320,7 @@ CALL 16
       MEM
         ARG
     MOVE
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbObjNew"
         MOVE
           GLOBAL "_tnode"
@@ -337,7 +337,7 @@ MOVE
         MEM W
           LOCAL -4
       CONST 0
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbStrStore"
   SEQ
     MOVE
@@ -349,7 +349,7 @@ CALL 16
       MEM
         ARG
     MOVE
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbStrFromInt"
         MOVE
           MEM
@@ -366,7 +366,7 @@ RETURN "_4_leave"
 label _4_leave
 cleanup:
   SEQ
-    CALL 8
+    CALL 8 "Ci"
       GLOBAL "__bbObjRelease"
       MOVE
         MEM W
@@ -377,11 +377,11 @@ leave pop=8
 func _flabel frame=0
 sdata "node" label=_9
 RETURN "_5_leave"
-  CALL 16 W
+  CALL 16 "Cii" W
     GLOBAL "__bbStrConcat"
     SEQ
       MOVE
-        CALL 8 W
+        CALL 8 "Ci" W
           GLOBAL "__bbStrConst"
           MOVE
             GLOBAL "_9"
@@ -390,7 +390,7 @@ RETURN "_5_leave"
         MEM
           ARG
       MOVE
-        CALL 8 W
+        CALL 8 "Ci" W
           GLOBAL "__bbStrLoad"
           MOVE
             ADD
@@ -404,7 +404,7 @@ RETURN "_5_leave"
           ARG 8
 sdata "" label=_10
 RETURN "_5_leave"
-  CALL 8 W
+  CALL 8 "Ci" W
     GLOBAL "__bbStrConst"
     MOVE
       GLOBAL "_10"

@@ -1,11 +1,11 @@
 func __MAIN frame=16
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbRestore"
   MOVE
     GLOBAL "__DATA"
     MEM
       ARG
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbLoadLibs"
   MOVE
     GLOBAL "__LIBS"
@@ -21,7 +21,7 @@ MOVE
       LOCAL -4
   MEM
     LOCAL -8
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbUndimArray"
   MOVE
     GLOBAL "_agrid"
@@ -39,7 +39,7 @@ MOVE
     ADD
       GLOBAL "_agrid"
       CONST 20
-CALL 8
+CALL 8 "Ci"
   GLOBAL "__bbDimArray"
   MOVE
     GLOBAL "_agrid"
@@ -51,7 +51,7 @@ idata "1"
 idata "2"
 idata "0"
 idata "0"
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
     MOVE
@@ -59,7 +59,7 @@ CALL 16
       MEM
         ARG
     MOVE
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbObjNew"
         MOVE
           GLOBAL "_tthing"
@@ -76,7 +76,7 @@ MOVE
           LOCAL -4
       CONST 0
 sdata "hi" label=_5
-CALL 16
+CALL 16 "Cii"
   GLOBAL "__bbStrStore"
   SEQ
     MOVE
@@ -88,7 +88,7 @@ CALL 16
       MEM
         ARG
     MOVE
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbStrConst"
         MOVE
           GLOBAL "_5"
@@ -116,7 +116,7 @@ MOVE
             ARG 8
         SEQ
           MOVE W
-            CALL 8 W
+            CALL 8 "Ci" W
               GLOBAL "__bbStrLoad"
               MOVE
                 ADD
@@ -183,11 +183,11 @@ JUMPF "_7"
       LOCAL -8
     CONST 4
 label _3
-CALL 8
+CALL 8 "Ci"
   GLOBAL "_fprint"
   SEQ
     MOVE W
-      CALL 8 W
+      CALL 8 "Ci" W
         GLOBAL "__bbStrFromInt"
         MOVE
           MEM
@@ -212,7 +212,7 @@ RET
 label _2_leave
 cleanup:
   SEQ
-    CALL 8
+    CALL 8 "Ci"
       GLOBAL "__bbObjRelease"
       MOVE
         MEM W
@@ -253,11 +253,11 @@ RETURN "_4_leave"
   ADD
     MEM
       LOCAL -4
-    CALL 8
+    CALL 8 "Ci"
       GLOBAL "_flen"
       SEQ
         MOVE W
-          CALL 8 W
+          CALL 8 "Ci" W
             GLOBAL "__bbStrLoad"
             MOVE
               LOCAL 28
@@ -270,7 +270,7 @@ RETURN "_4_leave"
 label _4_leave
 cleanup:
   SEQ
-    CALL 8
+    CALL 8 "Ci"
       GLOBAL "__bbStrRelease"
       MOVE
         MEM W

@@ -51,6 +51,7 @@ struct Node{
 	static TNode *jumpge( TNode *l,TNode *r,const string &s );
 	static TNode *call( const string &func,TNode *a0=0,TNode *a1=0,TNode *a2=0 );
 	static TNode *fcall( const string &func,TNode *a0=0,TNode *a1=0,TNode *a2=0 );
+	static TNode *floatArgs( TNode *call );	//x64: mark all args of a runtime helper call as float
 
 	//D4 in x64-plan.md: pointer-width tagging
 	static bool isWideType( Type *ty );

@@ -102,8 +102,12 @@
   - Regenerated `tests/x64/abitest.dump`: 16 MEM W, 2 MOVE W, 4 CALL W nodes (all pointer-width).
   - Mac: build OK, all 11 suites pass (407+19+61+27+11+10011+26+28 = 11,590 checks, 0 failed).
 
+- x64 commits 4/4b/5/6 (asmjit, harness relocs, integer tiles, calls) — written and tested in the claude.ai session, applied as patches:
+  - test_codegen_x64 (10), test_tiles_x64 (167), test_calls_x64 (50).
+  - Commit 6 front end: IR_CALL/IR_FCALL sconst = call class ("" Blitz, "C"+i/f per arg C call); FuncType::blitzFunc; Node::floatArgs. Reference dumps regenerated; new tests/x64/calltest.bb/.dump.
+
 ## Next
-- Prompt 3 commit 4: asmjit + skeleton backend — x64-plan.md section 5
+- Prompt 3 commit 7: floats (SSE) — x64-plan.md section 5
 
 ## Blockers
 - None

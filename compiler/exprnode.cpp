@@ -68,7 +68,7 @@ TNode *CastNode::translate( Codegen *g ){
 	}
 	if( expr->sem_type==Type::float_type && sem_type==Type::string_type ){
 		//float->str
-		return call( "__bbStrFromFloat",t );
+		return floatArgs( call( "__bbStrFromFloat",t ) );
 	}
 	if( expr->sem_type->structType() && sem_type==Type::string_type ){
 		//obj->str
@@ -182,6 +182,13 @@ TNode *CallNode::translate( Codegen *g ){
 	}else{
 		t=d_new TNode( IR_CALL,l,r,exprs->size()*BB_SLOT );
 		t->wide=isWideType( sem_type ); // D4: tag pointer-returning calls
+	}
+	if( !f->blitzFunc ){
+		// x64 (D5): runtime/userlib functions use the C convention
+		t->sconst="C";
+		for( int k=0;k<exprs->size();++k ){
+			t->sconst+=exprs->exprs[k]->sem_type==Type::float_type ? 'f' : 'i';
+		}
 	}
 
 	if( f->returnType->stringType() ){
@@ -338,8 +345,8 @@ TNode *UniExprNode::translate( Codegen *g ){
 		switch( op ){
 		case '+':return l;
 		case '-':n=IR_FNEG;break;
-		case ABS:return fcall( "__bbFAbs",l );
-		case SGN:return fcall( "__bbFSgn",l );
+		case ABS:return floatArgs( fcall( "__bbFAbs",l ) );
+		case SGN:return floatArgs( fcall( "__bbFSgn",l ) );
 		}
 	}
 	return d_new TNode( n,l,0 );
@@ -453,8 +460,8 @@ TNode *ArithExprNode::translate( Codegen *g ){
 		switch( op ){
 		case '+':n=IR_FADD;break;case '-':n=IR_FSUB;break;
 		case '*':n=IR_FMUL;break;case '/':n=IR_FDIV;break;
-		case MOD:return fcall( "__bbFMod",l,r );
-		case '^':return fcall( "__bbFPow",l,r );
+		case MOD:return floatArgs( fcall( "__bbFMod",l,r ) );
+		case '^':return floatArgs( fcall( "__bbFPow",l,r ) );
 		}
 	}
 	return d_new TNode( n,l,r );

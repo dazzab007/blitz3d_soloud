@@ -199,6 +199,7 @@ TNode *Node::call( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 	TNode *l=d_new TNode( IR_GLOBAL,0,0,func );
 	TNode *r=d_new TNode( IR_CALL,l,t,size );
 	r->wide=isPointerHelper( func ); // D4: tag pointer-returning helpers
+	r->sconst="C"+string( size/BB_SLOT,'i' ); // x64: C call, int/pointer args
 	return r;
 }
 
@@ -221,7 +222,17 @@ TNode *Node::fcall( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 		}
 	}
 	TNode *l=d_new TNode( IR_GLOBAL,0,0,func );
-	return d_new TNode( IR_FCALL,l,t,size );
+	TNode *r=d_new TNode( IR_FCALL,l,t,size );
+	r->sconst="C"+string( size/BB_SLOT,'i' ); // x64: C call, int/pointer args
+	return r;
+}
+
+//x64 call classes (x64-plan.md D5): IR_CALL/IR_FCALL sconst is empty for a
+//Blitz function (args in the outgoing stack area) or "C" plus one char per
+//arg for a C function ('i' int/pointer -> GP register, 'f' float -> XMM).
+TNode *Node::floatArgs( TNode *call ){
+	for( int k=1;k<call->sconst.size();++k ) call->sconst[k]='f';
+	return call;
 }
 
 TNode *Node::seq( TNode *l,TNode *r ){

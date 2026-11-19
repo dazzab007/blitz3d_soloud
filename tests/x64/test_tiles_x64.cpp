@@ -3,56 +3,10 @@
 //(enter / code / label / leave), links the result into an X64Module,
 //loads it with X64Loader and calls it.
 
-#include <cstdio>
-#include <cstdint>
 #include <csetjmp>
-#include <algorithm>
-#include "harness.h"
-#include "../../compiler/codegen_x64/codegen_x64.h"
+#include "x64test.h"
 
 using namespace asmjit;
-
-static int tests_run=0;
-static int tests_failed=0;
-
-#define CHECK(cond) do{ \
-	++tests_run; \
-	if( !(cond) ){ \
-		++tests_failed; \
-		printf("FAIL %s:%d: %s\n",__FILE__,__LINE__,#cond); \
-	} \
-}while(0)
-
-#define CHECK_EQ(a,b) do{ \
-	++tests_run; \
-	long long _a=(long long)(a),_b=(long long)(b); \
-	if( _a!=_b ){ \
-		++tests_failed; \
-		printf("FAIL %s:%d: %s == %lld, expected %lld\n",__FILE__,__LINE__,#a,_a,_b); \
-	} \
-}while(0)
-
-///////////////////
-// TNode helpers //
-///////////////////
-
-static TNode *K( int n ){ return new TNode( IR_CONST,0,0,n ); }
-static TNode *op( int o,TNode *l,TNode *r=0 ){ return new TNode( o,l,r ); }
-static TNode *global( const char *s ){ return new TNode( IR_GLOBAL,0,0,string( s ) ); }
-static TNode *mem( TNode *a,bool wide=false ){ TNode *t=new TNode( IR_MEM,a ); t->wide=wide;return t; }
-static TNode *move( TNode *v,TNode *m ){ TNode *t=new TNode( IR_MOVE,v,m ); t->wide=m->wide;return t; }
-static TNode *seq( TNode *a,TNode *b ){ return new TNode( IR_SEQ,a,b ); }
-static TNode *jump( int o,TNode *l,const char *s,TNode *r=0 ){ return new TNode( o,l,r,string( s ) ); }
-static TNode *ret( TNode *v ){ return new TNode( IR_RETURN,v,0,string( "_ret" ) ); }
-
-//Locals: slot k of the function under test.
-static int g_slot[8];
-static TNode *local( int k ){ return new TNode( IR_LOCAL,0,0,g_slot[k] ); }
-static TNode *lv( int k,bool wide=false ){ return mem( local( k ),wide ); }
-
-/////////////////////
-// Build and load  //
-/////////////////////
 
 //Stub symbols (runtime functions / data) visible to generated code.
 static int g_int;
@@ -72,56 +26,16 @@ static std::map<std::string,void*> stubs(){
 	return s;
 }
 
-struct Fn{
-	CodeHolder holder;
-	Codegen_x64 *cg;
-	X64Module mod;
-	X64Loader loader;
+//One function "_f" with 8 local slots.
+struct Fn : public Prog{
 	void *entry;
-	bool built;
-
-	Fn():cg(0),entry(0),built(false){
-		holder.init( Environment::host() );
-		cg=new Codegen_x64( &holder,false );
-		for( int k=0;k<8;++k ) g_slot[k]=cg->localOffset( k );
-		cg->enter( "_f",8*8 );
-	}
-	~Fn(){ loader.free();delete cg; }
-
-	void code( TNode *t ){ cg->code( t ); }
-
-	//Finish the function (return label + epilogue), link and load.
+	Fn():entry(0){ begin( "_f",8*8 ); }
 	bool finish( TNode *cleanup=0 ){
-		cg->label( "_ret" );
-		cg->leave( cleanup,0 );
-		built=cg->ok();
-		if( !built ) return false;
-
-		//Copy the text section, defining each bound label at its offset.
-		CodeBuffer &buf=holder.text_section()->buffer();
-		std::vector<std::pair<string,int> > syms=cg->symbols();
-		std::vector<std::pair<int,string> > byOff;
-		for( size_t i=0;i<syms.size();++i ) byOff.push_back( std::make_pair( syms[i].second,syms[i].first ) );
-		std::sort( byOff.begin(),byOff.end() );
-		int at=0;
-		for( size_t i=0;i<byOff.size();++i ){
-			mod.emitBytes( buf.data()+at,byOff[i].first-at );
-			at=byOff[i].first;
-			mod.addSymbol( byOff[i].second.c_str() );
-		}
-		mod.emitBytes( buf.data()+at,(int)buf.size()-at );
-
-		const std::vector<Codegen_x64::Fixup> &fx=cg->fixups();
-		for( size_t i=0;i<fx.size();++i ){
-			RelocKind k=fx[i].kind==Codegen_x64::FIX_ABS64 ? ABS64 :
-				(fx[i].kind==Codegen_x64::FIX_REL32 ? REL32 : ABS32);
-			mod.addReloc( fx[i].sym.c_str(),fx[i].offset,k );
-		}
-		loader.load( mod,stubs() );
-		entry=loader.symbol( mod,"_f" );
+		end( cleanup );
+		if( !link( stubs() ) ) return false;
+		entry=sym( "_f" );
 		return entry!=0;
 	}
-
 	int call32(){ return entry ? ((int(*)())entry)() : -12345678; }
 	int64_t call64(){ return entry ? ((int64_t(*)())entry)() : -12345678; }
 };

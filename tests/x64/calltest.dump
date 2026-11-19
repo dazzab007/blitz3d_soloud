@@ -1,0 +1,205 @@
+func __MAIN frame=48
+CALL 8 "Ci"
+  GLOBAL "__bbRestore"
+  MOVE
+    GLOBAL "__DATA"
+    MEM
+      ARG
+CALL 8 "Ci"
+  GLOBAL "__bbLoadLibs"
+  MOVE
+    GLOBAL "__LIBS"
+    MEM
+      ARG
+JSR "_2_begin"
+JUMP "_2_leave"
+label _2_begin
+MOVE
+  MOVE
+    MOVE
+      MOVE
+        MOVE
+          MOVE
+            CONST 0
+            MEM
+              LOCAL -4
+          MEM W
+            LOCAL -8
+        MEM
+          LOCAL -12
+      MEM
+        LOCAL -16
+    MEM
+      LOCAL -20
+  MEM
+    LOCAL -24
+sdata "abc" label=_4
+MOVE
+  FCALL 24
+    GLOBAL "_fmix"
+    SEQ
+      MOVE
+        CONST 1
+        MEM
+          ARG
+      SEQ
+        MOVE
+          CONST 1075838976
+          MEM
+            ARG 8
+        SEQ
+          MOVE W
+            CALL 8 "Ci" W
+              GLOBAL "__bbStrConst"
+              MOVE
+                GLOBAL "_4"
+                MEM
+                  ARG
+            MEM W
+              ARG 16
+  MEM
+    LOCAL -4
+CALL 16 "Cii"
+  GLOBAL "__bbStrStore"
+  SEQ
+    MOVE
+      LOCAL -8
+      MEM
+        ARG
+    MOVE
+      CALL 8 "Cf" W
+        GLOBAL "__bbStrFromFloat"
+        MOVE
+          MEM
+            LOCAL -4
+          MEM
+            ARG
+      MEM
+        ARG 8
+MOVE
+  FCALL 8 "Cf"
+    GLOBAL "_fsin"
+    SEQ
+      MOVE
+        MEM
+          LOCAL -4
+        MEM
+          ARG
+  MEM
+    LOCAL -12
+MOVE
+  FCALL 16 "Cff"
+    GLOBAL "__bbFPow"
+    SEQ
+      MOVE
+        MEM
+          LOCAL -4
+        MEM
+          ARG
+      MOVE
+        CONST 1073741824
+        MEM
+          ARG 8
+  MEM
+    LOCAL -16
+MOVE
+  FCALL 8 "Cf"
+    GLOBAL "__bbFAbs"
+    MOVE
+      MEM
+        LOCAL -12
+      MEM
+        ARG
+  MEM
+    LOCAL -20
+MOVE
+  FCALL 16 "Cff"
+    GLOBAL "__bbFMod"
+    SEQ
+      MOVE
+        MEM
+          LOCAL -4
+        MEM
+          ARG
+      MOVE
+        CONST 1077936128
+        MEM
+          ARG 8
+  MEM
+    LOCAL -24
+CALL 8 "Ci"
+  GLOBAL "_fprint"
+  SEQ
+    MOVE W
+      CALL 16 "Cii" W
+        GLOBAL "_fleft"
+        SEQ
+          MOVE W
+            CALL 8 "Ci" W
+              GLOBAL "__bbStrLoad"
+              MOVE
+                LOCAL -8
+                MEM
+                  ARG
+            MEM W
+              ARG
+          SEQ
+            MOVE
+              CONST 2
+              MEM
+                ARG 8
+      MEM W
+        ARG
+RET
+label _2_leave
+cleanup:
+  SEQ
+    CALL 8 "Ci"
+      GLOBAL "__bbStrRelease"
+      MOVE
+        MEM W
+          LOCAL -8
+        MEM
+          ARG
+leave pop=0
+func _fmix frame=0
+FRETURN "_3_leave"
+  FADD
+    FADD
+      FCAST
+        MEM
+          LOCAL 20
+      MEM
+        LOCAL 24
+    FCAST
+      CALL 8 "Ci"
+        GLOBAL "_flen"
+        SEQ
+          MOVE W
+            CALL 8 "Ci" W
+              GLOBAL "__bbStrLoad"
+              MOVE
+                LOCAL 28
+                MEM
+                  ARG
+            MEM W
+              ARG
+FRETURN "_3_leave"
+  CONST 0
+label _3_leave
+cleanup:
+  SEQ
+    CALL 8 "Ci"
+      GLOBAL "__bbStrRelease"
+      MOVE
+        MEM W
+          LOCAL 28
+        MEM
+          ARG
+leave pop=24
+align 4
+label __LIBS
+sdata ""
+align 4
+label __DATA
+idata "0"

@@ -54,6 +54,13 @@ XMM0-7 by position class; 16-byte stack alignment at every call; int returns in
 eax (sign-extend), wide returns in rax, float returns in xmm0. Runtime functions
 are called through absolute 64-bit addresses (new `ABS64` reloc), never rel32
 (the runtime dylib can be more than 2 GB away).
+*Refined in commit 6:* System V is used for every **C** call (runtime commands,
+`__bb*` helpers, userlibs). Calls between **Blitz** functions keep the IR's
+stack-argument model: the caller's outgoing area stays at `[rsp]` and the
+callee reads params at `[rbp+16+8*k]`, so no register homing or param-type
+plumbing is needed. The IR's float values are bit patterns with no type, so the
+front end tags each call: `IR_CALL`/`IR_FCALL` `sconst` is empty for a Blitz
+function, or `"C"` plus one char per arg (`i` GP register, `f` XMM register).
 
 **D6. Frame layout via the backend.** `Codegen` gains
 `argOffset(k)`/`localOffset(k)` (or equivalent). The x86-32 backend returns
@@ -133,7 +140,7 @@ waits for Prompt 4, since userlibs need `dlopen` anyway.
 ## 7. Wide-tag rules (settled in commits 3b/3c)
 
 - Store width = the destination `IR_MEM`'s `wide` flag. `MOVE W` is informational only.
-- Call arguments (`MEM ARG k`): the backend passes the full 64-bit value of the source expression; callees read ints from the low 32 bits.
+- Call arguments (`MEM ARG k`): wide args are stored and passed as 64 bits; int args are stored as 32 bits, so the upper half of the register/stack slot is undefined and callees read only the low 32 bits (as System V allows for `int`). (Updated in commit 6.)
 - `RETURN` width is inferred from the returned expression; a `CONST 0` return in a pointer-returning function is fine (32-bit mov zero-extends).
 - `__bbObjEachFirst/Next`, `__bbObjToHandle`, `__bbObjDelete` are int/void: not wide. `__bbObjFromHandle`, `__bbObjNew`, `__bbStr*` producers, runtime `$` functions and user functions returning string/object are `CALL W`.
 - Commit 8: type descriptors (e.g. `_tthing`) currently emit null pointer fields as `idata 0`. On x86-64 every pointer field must be an 8-byte `pdata`, with padding matching the runtime `BBObjType`/`BBObj` layout (static_assert the offsets).

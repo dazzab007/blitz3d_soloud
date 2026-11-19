@@ -35,7 +35,8 @@ struct FuncType : public Type{
 	Type *returnType;
 	DeclSeq *params;
 	bool userlib,cfunc;
-	FuncType( Type *t,DeclSeq *p,bool ulib,bool cfn ):returnType(t),params(p),userlib(ulib),cfunc(cfn){}
+	bool blitzFunc;		//declared in Blitz code (x64: Blitz call convention)
+	FuncType( Type *t,DeclSeq *p,bool ulib,bool cfn ):returnType(t),params(p),userlib(ulib),cfunc(cfn),blitzFunc(false){}
 	~FuncType(){ delete params; }
 	FuncType *funcType(){ return this; }
 };

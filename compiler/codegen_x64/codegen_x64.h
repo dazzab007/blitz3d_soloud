@@ -2,8 +2,9 @@
 //Implements the Codegen interface using asmjit.
 //commit 5: integer tiles - CONST, LOCAL/GLOBAL, MEM/MOVE (32/64-bit),
 //ADD/SUB/MUL/DIV, AND/OR/XOR/shifts, NEG, SETxx, JUMP/JUMPT/JUMPF/JUMPGE,
-//RETURN, SEQ; rbp frame. Calls, ARG, JSR/RET: commit 6. Floats: commit 7.
-//Data: commit 8.
+//RETURN, SEQ; rbp frame.
+//commit 6: CALL (Blitz and C conventions), ARG, JSR/RET.
+//Floats (incl. FCALL): commit 7. Data: commit 8.
 
 #ifndef CODEGEN_X64_H
 #define CODEGEN_X64_H
@@ -60,7 +61,9 @@ private:
 	std::map<string,asmjit::Label> m_labels;
 	std::vector<Fixup> m_fixups;
 	bool m_inCode;
-	int m_depth;		//bytes pushed for temporaries (commit 6 stack alignment)
+	int m_depth;		//bytes below the frame (temporaries + outgoing arg areas)
+	struct ArgArea{ int depth,base; };
+	std::vector<ArgArea> m_areas;	//outgoing arg areas of calls being built
 	int m_errors;
 	asmjit::ErrorHandler *m_errorHandler;
 
@@ -77,6 +80,8 @@ private:
 	void evalBinary( TNode *t,bool wide );	//rax=l, rcx=r
 	void evalCompare( TNode *t );		//cmp l,r - flags only
 	void condJump( TNode *t,bool negate );
+	bool directMem( TNode *addr,bool wide,asmjit::x86::Mem &m );
+	void callNode( TNode *t );
 };
 
 #endif

@@ -27,6 +27,7 @@ static const RtSym rtSyms[] = {
 	{ "Print", 0, "$"  },
 	{ "Len",   '%', "$"  },
 	{ "Left",  '$', "$%" },
+	{ "Sin",   '#', "#"  },
 	{ 0, 0, 0 }
 };
 
