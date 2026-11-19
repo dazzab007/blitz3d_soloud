@@ -128,6 +128,11 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(bbdump)
 	target_link_libraries(bbdump compiler)
 
+	# x64 backend test: emit mov eax,42; ret through the harness, run it, get 42.
+	add_executable(test_codegen_x64 ../tests/x64/test_codegen_x64.cpp ../tests/x64/harness.cpp)
+	bb_target_options(test_codegen_x64)
+	target_link_libraries(test_codegen_x64 codegen_x64)
+
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
 	# which are not yet ported.

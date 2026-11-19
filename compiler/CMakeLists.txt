@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.16)
 
 project(compiler)
 
+#asmjit: x86-64 code generation library (portable build only, commit 4).
+if(BB_PORTABLE_BUILD)
+	include(FetchContent)
+	FetchContent_Declare(asmjit
+			GIT_REPOSITORY https://github.com/asmjit/asmjit.git
+			GIT_TAG master
+			GIT_SHALLOW TRUE
+			EXCLUDE_FROM_ALL
+	)
+	FetchContent_MakeAvailable(asmjit)
+endif()
+
 add_library(compiler
 		assem_x86/asm_insts.cpp
 		assem_x86/assem_x86.cpp
@@ -49,3 +61,13 @@ add_library(compiler
 bb_target_options(compiler)
 
 target_link_libraries(compiler stdutil)
+
+#x64 backend (portable build only, commit 4).
+if(BB_PORTABLE_BUILD)
+	add_library(codegen_x64
+			codegen_x64/codegen_x64.cpp
+			codegen_x64/codegen_x64.h
+	)
+	bb_target_options(codegen_x64)
+	target_link_libraries(codegen_x64 asmjit::asmjit)
+endif()
