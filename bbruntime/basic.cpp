@@ -271,7 +271,7 @@ BBObj *_bbObjNew( BBObjType *type ){
 			o->fields[k].VEC=_bbVecAlloc( (BBVecType*)type->fieldTypes[k] );
 			break;
 		default:
-			o->fields[k].INT=0;
+			memset( &o->fields[k],0,sizeof(BBField) );	//whole field: pointers are 8 bytes on x86-64
 		}
 	}
 	insertObj( o,&type->used );

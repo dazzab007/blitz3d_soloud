@@ -142,7 +142,7 @@ void VectorVarNode::semant( Environ *e ){
 }
 
 TNode *VectorVarNode::translate( Codegen *g ){
-	int sz=4;
+	int sz=BB_SLOT;	//element stride (8-byte slots on x86-64)
 	TNode *t=0;
 	for( int k=0;k<exprs->size();++k ){
 		TNode *p;

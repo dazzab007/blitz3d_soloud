@@ -262,7 +262,10 @@ string ftoa( float n ){
 	//(_ecvt/_gcvt are MSVC CRT functions).
 	char buffer[50];
 	snprintf( buffer,sizeof(buffer),"%.*g",digits,n );
-	return string( buffer );
+	string t( buffer );
+	//the Windows path always leaves one digit after the point ("3.0", not "3")
+	if( t.find_first_not_of( "-0123456789" )==string::npos ) t+=".0";
+	return t;
 #endif
 }
 

@@ -104,6 +104,7 @@
 
 - x64 commits 4/4b/5/6 (asmjit, harness relocs, integer tiles, calls) — written and tested in the claude.ai session, applied as patches:
   - test_codegen_x64 (10), test_tiles_x64 (167), test_calls_x64 (50).
+- Prompt 4 steps 1-2: real runtime compiled on macOS and linked into test_realrt_x64 (27 checks); RTEX longjmp; rtlink; slot-size fixes in basic.cpp/varnode.cpp; ftoa parity. test_frontend_x64 139, data 62, floats 114, calls 50, tiles 167, codegen 10, all 0 failed.
 - x64 commit 10 (debug mode): done. test_frontend_x64 136 checks (every program in release+debug, frame/env/file/position/alignment checks), data 62, floats 114, calls 50, tiles 167, codegen 10, all 0 failed. Fixed isWideNode for JUMPT/JUMPF/JUMPGE pass-through.
 - x64 commit 9 (front-end integration): done. test_frontend_x64 (49 checks: arithmetic, control flow, functions, Gosub, floats, strings, Types, arrays/Dim, Data, bigger programs, leak checks), data 62, floats 114, calls 50, tiles 167, codegen 10, all 0 failed. Fixed helper-call pointer-arg width, wide Null, jcc to runtime routines.
 - x64 commit 8 (data section): done. test_data_x64 (62 checks), floats 114, calls 50, tiles 167, codegen 10, all 0 failed. Packed runtime structs, null_data/field_data hooks.
@@ -111,7 +112,7 @@
   - Commit 6 front end: IR_CALL/IR_FCALL sconst = call class ("" Blitz, "C"+i/f per arg C call); FuncType::blitzFunc; Node::floatArgs. Reference dumps regenerated; new tests/x64/calltest.bb/.dump.
 
 ## Next
-- Prompt 4: macOS loader (mmap/dlopen, signals, userlib '*' handles). Prompt 3 (x64 backend) is complete through commit 10.
+- Prompt 4 step 3: loader (mmap/mprotect, relocs, dlsym) in linker/, signal handlers onto bb_err_jmp, blitzcc on macOS running Print "Hello", then 'Create executable' (ask before choosing the launcher approach). Prompt 3 (x64 backend) is complete; Prompt 4 steps 1-2 (runtime port, longjmp errors, real-runtime test) done.
 
 ## Blockers
 - None

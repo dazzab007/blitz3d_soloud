@@ -70,4 +70,9 @@ if(BB_PORTABLE_BUILD)
 	)
 	bb_target_options(codegen_x64)
 	target_link_libraries(codegen_x64 asmjit::asmjit)
+
+	#Portable runtime symbol declaration (Prompt 4): what blitz/libs.cpp does on Windows.
+	add_library(rtlink rtlink.cpp rtlink.h)
+	bb_target_options(rtlink)
+	target_link_libraries(rtlink compiler)
 endif()

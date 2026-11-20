@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(bbruntime)
 
 # Portable bbruntime sources: compile on macOS without Windows headers.
-set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp)
+set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp bberr.cpp)
 
 set(SRCS
 	basic.h
@@ -155,6 +155,12 @@ if (BB_PORTABLE_BUILD)
 	add_executable(test_frontend_x64 ../tests/x64/test_frontend_x64.cpp ../tests/x64/harness.cpp)
 	bb_target_options(test_frontend_x64)
 	target_link_libraries(test_frontend_x64 compiler codegen_x64)
+
+	# x64: compiled programs against the real runtime (basic/bbmath/bbstring) through
+	# the portable runtime symbol declaration (compiler/rtlink.cpp). RTEX longjmps.
+	add_executable(test_realrt_x64 ../tests/x64/test_realrt_x64.cpp ../tests/x64/harness.cpp)
+	bb_target_options(test_realrt_x64)
+	target_link_libraries(test_realrt_x64 rtlink compiler codegen_x64 bbruntime_core)
 
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)

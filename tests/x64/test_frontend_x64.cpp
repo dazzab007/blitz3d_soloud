@@ -241,7 +241,7 @@ static void test_floats(){
 		"7\n2\n4\n-2\n1\n1.5\n" );
 	expect( "float_math",
 		"Print Sqr(16)\nPrint Abs(-2.5)\nPrint Sgn(-3.5)\nx#=2 : Print x^10\nPrint 7.5 Mod 2\nPrint Sin(90)\n",
-		"4\n2.5\n-1\n1024\n1.5\n1\n" );
+		"4\n2.5\n-1.0\n1024\n1.5\n1\n" );
 }
 
 static void test_strings(){
@@ -338,6 +338,14 @@ static void test_arrays(){
 		"Type V\n Field a[3]\n Field s$[2]\nEnd Type\n"
 		"t.V=New V\nt\\a[2]=9 : t\\a[0]=1 : t\\s[1]=\"x\"\nPrint t\\a[2]+t\\a[0]\nPrint t\\s[1]\n",
 		"10\nx\n" );
+	//string/object elements are pointers: neighbouring vector elements must not overlap
+	expect( "vec_ptr_elements",
+		"Type V\n Field s$[3]\nEnd Type\n"
+		"t.V=New V : u.V=New V : u\\s[0]=\"u0\"\n"
+		"t\\s[0]=\"zero\" : t\\s[1]=\"one\" : t\\s[2]=\"two\"\n"
+		"Print t\\s[0]+t\\s[1]+t\\s[2]\nPrint u\\s[0]\n"
+		"Local l$[2] : l[0]=\"a\" : l[1]=\"b\" : Print l[0]+l[1]\n",
+		"zeroonetwo\nu0\nab\n" );
 	expectError( "dim_bounds",
 		"Dim a(3)\nPrint \"ok\"\na(4)=1\nPrint \"no\"\n","ok\n","out of bounds" );
 	expectError( "dim_negative",
