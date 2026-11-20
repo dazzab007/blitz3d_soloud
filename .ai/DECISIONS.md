@@ -65,3 +65,10 @@ debugenv table growable (vector, index+1 ids; 5000-env test) — fixed 1024 cap 
 - x64 c6: int args to C keep garbage in the upper 32 bits of the register/stack slot (SysV leaves them undefined for int params). Wide args are full 64-bit.
 - x64 c6: every call is padded so rsp%16==0 at the call (m_depth counts pushes + areas). JSR is `sub rsp,8; call; add rsp,8` so Gosub bodies stay aligned. JUMPGE error routines are now *called* (aligned, never return) instead of jumped to — supersedes the c5 note.
 - x64 c6: call targets always go through `movabs rax,sym; call rax` (ABS64), Blitz functions included. A direct rel32 for same-module calls is a later optimisation.
+- x64 c7: floats are evaluated into xmm0 by evalF(); the parent node decides float context (the IR has no float type, float constants are CONST holding the bits). In int context FADD..FDIV/FNEG/FCAST/FCALL run evalF then movd eax,xmm0, so storing a float to a local is the ordinary 32-bit int MOVE. Single precision only.
+- x64 c7: float temporaries use fpush/fpop = sub rsp,8 + movss [rsp] / movss + add rsp,8, with m_depth +/-8. Never [rbp-N]: that is where the locals live (the first local-model attempt stored temporaries there and corrupted nested expressions).
+- x64 c7: IR_CAST (float->int) is cvtss2si (round to nearest even under default MXCSR: 2.5->2, 3.5->4, -2.5->-2). FCAST is cvtsi2ss from eax.
+- x64 c7: FSETxx = ucomiss l,r then setcc; ucomiss sets CF/ZF like an unsigned compare, so EQ=kE, NE=kNE, LT=kB, GT=kA, LE=kBE, GE=kAE (one fcond() shared by eval and condJump). NaN/PF is not special-cased.
+- x64 c7: leave() saves rax and xmm0 around the cleanup statement, because the cleanup may call C and clobber both. Blitz and C functions both return floats in xmm0, so callNode needed no change for FCALL.
+- x64 c7: SSE single precision can differ in the last bit from x87 results on Windows.
+- x64 c7: scope note: tests/x64/x64test.h (fret/fcallN helpers) and tests/x64/test_tiles_x64.cpp (the "FADD unsupported" error check now uses opcode 9999, count stays 167) were edited with the user's approval.

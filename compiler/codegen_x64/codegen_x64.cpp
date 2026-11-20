@@ -1,5 +1,5 @@
 //x64 backend (x64-plan.md section 5).
-//commit 5: integer tiles. A simple stack evaluator: every expression leaves
+//commit 7 (floats): see evalF; commit 5: integer tiles. A simple stack evaluator: every expression leaves
 //its result in rax (eax when 32-bit); binary ops evaluate the right operand,
 //push it, evaluate the left operand into rax and pop the right into rcx.
 //Only rax/rcx/rdx are used, all caller-saved, so no registers need saving.
@@ -104,6 +104,46 @@ void Codegen_x64::pop( const Gp &r ){
 	m_depth-=8;
 }
 
+//Float temporaries live on the stack, never at [rbp-N] (that is where the
+//locals are). 8-byte slots keep m_depth/alignment bookkeeping identical to
+//integer temporaries; the float is the low 32 bits.
+void Codegen_x64::fpush(){
+	m_asm.sub( rsp,8 );
+	m_asm.movss( ptr( rsp,0,4 ),xmm0 );
+	m_depth+=8;
+}
+
+void Codegen_x64::fpop( const Vec &r ){
+	m_asm.movss( r,ptr( rsp,0,4 ) );
+	m_asm.add( rsp,8 );
+	m_depth-=8;
+}
+
+//Condition after `ucomiss xmm0,xmm1` (l in xmm0, r in xmm1). ucomiss sets
+//CF/ZF like an UNSIGNED integer compare, so use the unsigned conditions:
+//  FSETEQ ZF=1        kE
+//  FSETNE ZF=0        kNE
+//  FSETLT CF=1        kB   (l<r)
+//  FSETGT CF=0,ZF=0   kA   (l>r)
+//  FSETLE CF=1|ZF=1   kBE
+//  FSETGE CF=0        kAE
+//NaN (unordered sets ZF=PF=CF=1) is not special-cased; same as x86-32 fcomp
+//path ignoring PF. Shared by FSETxx and condJump.
+static CondCode fcond( int op ){
+	switch( op ){
+	case IR_FSETEQ:return CondCode::kE;
+	case IR_FSETNE:return CondCode::kNE;
+	case IR_FSETLT:return CondCode::kB;
+	case IR_FSETGT:return CondCode::kA;
+	case IR_FSETLE:return CondCode::kBE;
+	default:return CondCode::kAE;
+	}
+}
+
+static bool isFRelop( int op ){
+	return op>=IR_FSETEQ && op<=IR_FSETGE;
+}
+
 static bool isRelop( int op ){
 	return op>=IR_SETEQ && op<=IR_SETGE;
 }
@@ -195,10 +235,88 @@ void Codegen_x64::condJump( TNode *t,bool negate ){
 		m_asm.j( negate ? negate_cond( cc ) : cc,target );
 		return;
 	}
+	if( isFRelop( p->op ) ){
+		evalFCompare( p );
+		CondCode cc=fcond( p->op );
+		m_asm.j( negate ? negate_cond( cc ) : cc,target );
+		return;
+	}
 	eval( p );
 	if( isWide( p ) ) m_asm.test( rax,rax );
 	else m_asm.test( eax,eax );
 	m_asm.j( negate ? CondCode::kZ : CondCode::kNZ,target );
+}
+
+//Float context: the parent decides that the node yields a float. Result in
+//xmm0 (the IR has no float type; constants are CONST holding the bits).
+void Codegen_x64::evalF( TNode *t ){
+	switch( t->op ){
+
+	case IR_CONST:
+		m_asm.mov( eax,Imm( t->iconst ) );
+		m_asm.movd( xmm0,eax );
+		return;
+
+	case IR_MEM:{
+		Mem m;
+		if( directMem( t->l,false,m ) ){
+			m_asm.movss( xmm0,m );
+			return;
+		}
+		evalAs( t->l,true );
+		m_asm.movss( xmm0,ptr( rax,0,4 ) );
+		return;
+	}
+
+	case IR_SEQ:
+		if( !t->r ){ evalF( t->l );return; }
+		stmt( t->l );
+		evalF( t->r );
+		return;
+
+	case IR_FADD:case IR_FSUB:case IR_FMUL:case IR_FDIV:
+		evalF( t->r );
+		fpush();
+		evalF( t->l );
+		fpop( xmm1 );
+		switch( t->op ){
+		case IR_FADD:m_asm.addss( xmm0,xmm1 );break;
+		case IR_FSUB:m_asm.subss( xmm0,xmm1 );break;
+		case IR_FMUL:m_asm.mulss( xmm0,xmm1 );break;
+		case IR_FDIV:m_asm.divss( xmm0,xmm1 );break;
+		}
+		return;
+
+	case IR_FNEG:
+		evalF( t->l );
+		m_asm.movd( eax,xmm0 );
+		m_asm.xor_( eax,Imm( (int32_t)0x80000000 ) );
+		m_asm.movd( xmm0,eax );
+		return;
+
+	case IR_FCAST:
+		eval( t->l );
+		m_asm.cvtsi2ss( xmm0,eax );
+		return;
+
+	case IR_FCALL:
+		callNode( t );
+		return;
+
+	default:
+		fprintf( stderr,"codegen_x64: unsupported IR op %d in float context\n",t->op );
+		fail();
+		return;
+	}
+}
+
+//ucomiss l,r: l in xmm0, r in xmm1.
+void Codegen_x64::evalFCompare( TNode *t ){
+	evalF( t->r );
+	fpush();
+	evalF( t->l );
+	fpop( xmm1 );
+	m_asm.ucomiss( xmm0,xmm1 );
 }
 
 void Codegen_x64::stmt( TNode *t ){
@@ -247,6 +365,10 @@ void Codegen_x64::stmt( TNode *t ){
 		return;
 	case IR_RETURN:
 		if( t->l ) eval( t->l );
+		m_asm.jmp( getLabel( t->sconst ) );
+		return;
+	case IR_FRETURN:
+		evalF( t->l );
 		m_asm.jmp( getLabel( t->sconst ) );
 		return;
 	default:
@@ -419,8 +541,27 @@ void Codegen_x64::eval( TNode *t ){
 		m_asm.movzx( eax,al );
 		return;
 
+	//Float nodes in int context: bits via movd (a float is a 32-bit pattern).
+	case IR_FADD:case IR_FSUB:case IR_FMUL:case IR_FDIV:case IR_FNEG:
+	case IR_FCAST:case IR_FCALL:
+		evalF( t );
+		m_asm.movd( eax,xmm0 );
+		return;
+
+	//float -> int, round to nearest even (cvtss2si honours MXCSR default).
+	case IR_CAST:
+		evalF( t->l );
+		m_asm.cvtss2si( eax,xmm0 );
+		return;
+
+	case IR_FSETEQ:case IR_FSETNE:case IR_FSETLT:case IR_FSETGT:case IR_FSETLE:case IR_FSETGE:
+		evalFCompare( t );
+		m_asm.set( fcond( t->op ),al );
+		m_asm.movzx( eax,al );
+		return;
+
 	case IR_JUMP:case IR_JUMPT:case IR_JUMPF:case IR_JUMPGE:case IR_RETURN:
-	case IR_JSR:case IR_RET:
+	case IR_FRETURN:case IR_JSR:case IR_RET:
 		stmt( t );
 		return;
 
@@ -551,13 +692,16 @@ void Codegen_x64::code( TNode *t ){
 //pop_sz is ignored: the caller frees the outgoing area (Blitz convention).
 void Codegen_x64::leave( TNode *cleanup,int pop_sz ){
 	if( cleanup ){
-		//rax holds the return value; keep it (and 16-byte alignment).
-		m_asm.push( rax );
-		m_asm.push( rax );
+		//rax (int result) and xmm0 (float result) must survive the cleanup,
+		//which may call C. 16 bytes keeps the alignment.
+		m_asm.sub( rsp,16 );
+		m_asm.mov( ptr( rsp,0,8 ),rax );
+		m_asm.movss( ptr( rsp,8,4 ),xmm0 );
 		m_depth+=16;
 		stmt( cleanup );
-		m_asm.pop( rax );
-		m_asm.pop( rax );
+		m_asm.mov( rax,ptr( rsp,0,8 ) );
+		m_asm.movss( xmm0,ptr( rsp,8,4 ) );
+		m_asm.add( rsp,16 );
 		m_depth-=16;
 		delete cleanup;
 	}

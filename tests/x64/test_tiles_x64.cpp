@@ -300,10 +300,10 @@ static void test_errors(){
 		f.code( jump( IR_JUMP,0,"_nowhere" ) );
 		CHECK( !f.finish() );
 	}
-	//unsupported op (floats are commit 7)
+	//unsupported op (an opcode no tile handles)
 	{
 		Fn f;
-		f.code( op( IR_FADD,K( 1 ),K( 2 ) ) );
+		f.code( op( 9999,K( 1 ),K( 2 ) ) );
 		CHECK( !f.finish() );
 	}
 }

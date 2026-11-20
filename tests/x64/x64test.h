@@ -39,6 +39,7 @@ static int tests_failed=0;
 static string g_retLabel="_ret";	//return label of the function being built
 
 static TNode *K( int n ){ return new TNode( IR_CONST,0,0,n ); }
+//Float constant: CONST with a float bit pattern (FCONST, as x86-32 does).
 static TNode *KF( float f ){ int n;memcpy( &n,&f,4 );return K( n ); }
 static TNode *op( int o,TNode *l,TNode *r=0 ){ return new TNode( o,l,r ); }
 static TNode *global( const char *s ){ return new TNode( IR_GLOBAL,0,0,string( s ) ); }
@@ -47,8 +48,10 @@ static TNode *move( TNode *v,TNode *m ){ TNode *t=new TNode( IR_MOVE,v,m ); t->w
 static TNode *seq( TNode *a,TNode *b ){ return new TNode( IR_SEQ,a,b ); }
 static TNode *jump( int o,TNode *l,const char *s,TNode *r=0 ){ return new TNode( o,l,r,string( s ) ); }
 static TNode *ret( TNode *v ){ return new TNode( IR_RETURN,v,0,g_retLabel ); }
+static TNode *fret( TNode *v ){ return new TNode( IR_FRETURN,v,0,g_retLabel ); }
 
-//Locals and params of the function being built.
+//Locals and params of the function being built. Floats are plain (narrow)
+//slots: a float is the low 32 bits of an 8-byte slot.
 static TNode *local( int k ){ return new TNode( IR_LOCAL,0,0,-8*(k+1) ); }
 static TNode *lv( int k,bool wide=false ){ return mem( local( k ),wide ); }
 static TNode *pv( int k,bool wide=false ){ return mem( new TNode( IR_LOCAL,0,0,16+8*k ),wide ); }
@@ -72,6 +75,13 @@ static TNode *callN( TNode *target,int n,TNode **a,const char *cls,bool wideRet=
 	TNode *t=new TNode( IR_CALL,target,args( n,a,wides ),n*8 );
 	if( cls ) t->sconst=cls;
 	t->wide=wideRet;
+	return t;
+}
+
+//FCALL node (float result in xmm0).
+static TNode *fcallN( TNode *target,int n,TNode **a,const char *cls,const char *wides="" ){
+	TNode *t=new TNode( IR_FCALL,target,args( n,a,wides ),n*8 );
+	if( cls ) t->sconst=cls;
 	return t;
 }
 

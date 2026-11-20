@@ -4,7 +4,8 @@
 //ADD/SUB/MUL/DIV, AND/OR/XOR/shifts, NEG, SETxx, JUMP/JUMPT/JUMPF/JUMPGE,
 //RETURN, SEQ; rbp frame.
 //commit 6: CALL (Blitz and C conventions), ARG, JSR/RET.
-//Floats (incl. FCALL): commit 7. Data: commit 8.
+//commit 7: floats - FADD..FDIV, FNEG, FSETxx, CAST/FCAST, FCALL/FRETURN
+//(SSE single precision, float results in xmm0). Data: commit 8.
 
 #ifndef CODEGEN_X64_H
 #define CODEGEN_X64_H
@@ -72,10 +73,14 @@ private:
 	void movAbs64( const string &sym );
 	void push();
 	void pop( const asmjit::x86::Gp &r );
+	void fpush();						//push xmm0 as an 8-byte temporary
+	void fpop( const asmjit::x86::Vec &r );
 	void fail();
 
 	void eval( TNode *t );				//result in rax/eax, width isWide(t)
 	void evalAs( TNode *t,bool wide );	//sign-extends to 64 when needed
+	void evalF( TNode *t );				//float result in xmm0
+	void evalFCompare( TNode *t );		//ucomiss l,r - flags only
 	void stmt( TNode *t );				//statement context (no result needed)
 	void evalBinary( TNode *t,bool wide );	//rax=l, rcx=r
 	void evalCompare( TNode *t );		//cmp l,r - flags only
