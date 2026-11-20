@@ -34,10 +34,12 @@ public:
 	virtual void code( TNode *code );
 	virtual void leave( TNode *cleanup,int pop_sz );
 	virtual void label( const string &l );
-	virtual void i_data( int i,const string &l );
-	virtual void s_data( const string &s,const string &l );
-	virtual void p_data( const string &p,const string &l );
+	virtual void i_data( int i,const string &l="" );
+	virtual void s_data( const string &s,const string &l="" );
+	virtual void p_data( const string &p,const string &l="" );
 	virtual void align_data( int n );
+	virtual void null_data( const string &l="" );
+	virtual void field_data( int i,const string &l="" );
 	virtual void flush();
 
 	//Direct access to the assembler (tests).
@@ -45,6 +47,14 @@ public:
 
 	//Fixups recorded so far (ABS64 for GLOBAL and JUMPGE targets).
 	const std::vector<Fixup> &fixups()const{ return m_fixups; }
+
+	//Data section (commit 8). Bytes, labels (offsets from the data start) and
+	//ABS64 fixups (offsets from the data start). The loader places the data
+	//after the text, on its own writable pages, and data labels are module
+	//symbols just like text labels.
+	const std::vector<unsigned char> &data()const{ return m_data; }
+	const std::vector<std::pair<string,int> > &dataSymbols()const{ return m_dataSyms; }
+	const std::vector<Fixup> &dataFixups()const{ return m_dataFixups; }
 
 	//Labels bound in the text section, with their offsets.
 	std::vector<std::pair<string,int> > symbols()const;
@@ -66,6 +76,11 @@ private:
 	struct ArgArea{ int depth,base; };
 	std::vector<ArgArea> m_areas;	//outgoing arg areas of calls being built
 	int m_errors;
+	std::vector<unsigned char> m_data;
+	std::vector<std::pair<string,int> > m_dataSyms;
+	std::vector<Fixup> m_dataFixups;
+	void dataLabel( const string &l );
+	void dataBytes( const void *p,int n );
 	asmjit::ErrorHandler *m_errorHandler;
 
 	asmjit::Label getLabel( const string &l );

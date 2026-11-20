@@ -125,7 +125,7 @@ void DimNode::translate( Codegen *g ){
 	else et=5;
 
 	g->align_data( 4 );
-	g->i_data( 0,"_a"+ident );
+	g->null_data( "_a"+ident );
 	g->i_data( et );
 	g->i_data( exprs->size() );
 	for( int k=0;k<exprs->size();++k ) g->i_data( 0 );

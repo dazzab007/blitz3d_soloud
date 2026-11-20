@@ -88,7 +88,7 @@ void VarDeclNode::semant( Environ *e ){
 void VarDeclNode::translate( Codegen *g ){
 	if( kind & DECL_GLOBAL ){
 		g->align_data( 4 );
-		g->i_data( 0,"_v"+ident );
+		g->null_data( "_v"+ident );
 	}
 	if( expr ) g->code( sem_var->store( g,expr->translate( g ) ) );
 }
@@ -182,10 +182,10 @@ void StructDeclNode::translate( Codegen *g ){
 	int k;
 	for( k=0;k<2;++k ){
 		string lab=genLabel();
-		g->i_data( 0,lab );	//fields
+		g->null_data( lab );	//fields
 		g->p_data( lab );	//next
 		g->p_data( lab );	//prev
-		g->i_data( 0 );		//type
+		g->null_data();		//type
 		g->i_data( -1 );	//ref_cnt
 	}
 
@@ -229,10 +229,10 @@ void DataDeclNode::translate( Codegen *g ){
 void DataDeclNode::transdata( Codegen *g ){
 	ConstNode *c=expr->constNode();
 	if( expr->sem_type==Type::int_type ){
-		g->i_data( 1 );g->i_data( c->intValue() );
+		g->i_data( 1 );g->field_data( c->intValue() );
 	}else if( expr->sem_type==Type::float_type ){
 		float n=c->floatValue();
-		g->i_data( 2 );g->i_data( *(int*)&n );
+		g->i_data( 2 );g->field_data( *(int*)&n );
 	}else{
 		g->i_data( 4 );g->p_data( str_label );
 	}
@@ -279,5 +279,5 @@ void VectorDeclNode::translate( Codegen *g ){
 	else if( VectorType *v=type->vectorType() ) t=v->label;
 	g->p_data( t );
 
-	if( kind==DECL_GLOBAL ) g->i_data( 0,"_v"+ident );
+	if( kind==DECL_GLOBAL ) g->null_data( "_v"+ident );
 }

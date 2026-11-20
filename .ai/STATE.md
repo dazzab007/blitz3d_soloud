@@ -104,11 +104,12 @@
 
 - x64 commits 4/4b/5/6 (asmjit, harness relocs, integer tiles, calls) — written and tested in the claude.ai session, applied as patches:
   - test_codegen_x64 (10), test_tiles_x64 (167), test_calls_x64 (50).
+- x64 commit 8 (data section): done. test_data_x64 (62 checks), floats 114, calls 50, tiles 167, codegen 10, all 0 failed. Packed runtime structs, null_data/field_data hooks.
 - x64 commit 7 (floats, SSE): done. test_floats_x64 (114 checks), test_calls_x64 (50), test_tiles_x64 (167), test_codegen_x64 (10), all 0 failed.
   - Commit 6 front end: IR_CALL/IR_FCALL sconst = call class ("" Blitz, "C"+i/f per arg C call); FuncType::blitzFunc; Node::floatArgs. Reference dumps regenerated; new tests/x64/calltest.bb/.dump.
 
 ## Next
-- Prompt 3 commit 8: data (i_data/s_data/p_data, type descriptors)
+- Prompt 3 commit 9: front-end integration (real .bb snippets through the front end into Codegen_x64, run with stub runtime)
 
 ## Blockers
 - None

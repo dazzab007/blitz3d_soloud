@@ -55,6 +55,13 @@ public:
 	virtual void s_data( const string &s,const string &l="" )=0;
 	virtual void p_data( const string &p,const string &l="" )=0;
 	virtual void align_data( int n )=0;
+	//Pointer-width data hooks (x64). The BB runtime structs (BBObj, BBObjType,
+	//BBData, BBArray) are packed, with 8-byte pointers on x86-64. The defaults
+	//forward to i_data so the x86-32 output is unchanged.
+	//null_data: a null pointer field (4 bytes on x86-32, 8 on x86-64).
+	virtual void null_data( const string &l="" ){ i_data( 0,l ); }
+	//field_data: an int stored in a BBField union (4 bytes on x86-32, 8 on x86-64).
+	virtual void field_data( int i,const string &l="" ){ i_data( i,l ); }
 	virtual void flush()=0;
 };
 

@@ -711,25 +711,68 @@ void Codegen_x64::leave( TNode *cleanup,int pop_sz ){
 	m_inCode=false;
 }
 
+//Data section (commit 8). Layout rules, all driven by the runtime's packed
+//structs (basic.h is #pragma pack(1)): int = 4 bytes, pointer = 8 bytes, no
+//padding between fields. See DECISIONS.md "x64 c8".
+void Codegen_x64::dataLabel( const string &l ){
+	if( l.empty() ) return;
+	for( size_t k=0;k<m_dataSyms.size();++k ){
+		if( m_dataSyms[k].first==l ){
+			fprintf( stderr,"codegen_x64: data label defined twice: %s\n",l.c_str() );
+			fail();return;
+		}
+	}
+	m_dataSyms.push_back( std::make_pair( l,(int)m_data.size() ) );
+}
+
+void Codegen_x64::dataBytes( const void *p,int n ){
+	const unsigned char *b=(const unsigned char*)p;
+	m_data.insert( m_data.end(),b,b+n );
+}
+
 void Codegen_x64::label( const string &l ){
 	if( m_inCode ) bindLabel( l );
-	//data labels: commit 8
+	else dataLabel( l );
 }
 
 void Codegen_x64::i_data( int i,const string &l ){
-	//commit 8
+	dataLabel( l );
+	dataBytes( &i,4 );
+}
+
+void Codegen_x64::null_data( const string &l ){
+	dataLabel( l );
+	long long z=0;
+	dataBytes( &z,8 );
+}
+
+void Codegen_x64::field_data( int i,const string &l ){
+	dataLabel( l );
+	long long q=(long long)(unsigned int)i;	//BBField union: INT/FLT in the low 4 bytes
+	dataBytes( &q,8 );
 }
 
 void Codegen_x64::s_data( const string &s,const string &l ){
-	//commit 8
+	dataLabel( l );
+	dataBytes( s.c_str(),(int)s.size()+1 );
 }
 
 void Codegen_x64::p_data( const string &p,const string &l ){
-	//commit 8
+	dataLabel( l );
+	Fixup f;
+	f.offset=(int)m_data.size();
+	f.sym=p;
+	f.kind=FIX_ABS64;
+	m_dataFixups.push_back( f );
+	long long z=0;
+	dataBytes( &z,8 );
 }
 
+//Starts of descriptors and globals are 8-aligned so 8-byte slots are never
+//split across cache lines; inside a descriptor the runtime layout is packed.
 void Codegen_x64::align_data( int n ){
-	//commit 8
+	if( n<8 ) n=8;
+	while( m_data.size()%n ) m_data.push_back( 0 );
 }
 
 void Codegen_x64::flush(){

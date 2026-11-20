@@ -8,7 +8,7 @@
 #include <climits>
 #include <cstdint>
 
-X64Module::X64Module(){}
+X64Module::X64Module():m_textSize(-1){}
 X64Module::~X64Module(){}
 
 void X64Module::emit( uint8_t byte ){
@@ -38,8 +38,19 @@ void X64Module::emitBytes( const void *data,int sz ){
 	m_code.insert( m_code.end(),p,p+sz );
 }
 
+void X64Module::beginData(){
+	long pageSize=sysconf(_SC_PAGESIZE);
+	while( m_code.size()%pageSize ) m_code.push_back( 0 );
+	m_textSize=(int)m_code.size();
+}
+
 bool X64Module::addSymbol( const char *sym ){
 	int offset=getPC();
+	m_symbols[sym]=offset;
+	return true;
+}
+
+bool X64Module::addDataSymbol( const char *sym,int offset ){
 	m_symbols[sym]=offset;
 	return true;
 }
@@ -120,7 +131,10 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 	}
 
 	//mprotect RX.
-	if( mprotect( mem,mapSize,PROT_READ|PROT_EXEC )!=0 ){
+	//Text pages RX; data pages (from textSize()) stay RW.
+	int textBytes=mod.textSize();
+	textBytes=((textBytes+pageSize-1)/pageSize)*pageSize;
+	if( textBytes>0 && mprotect( mem,textBytes,PROT_READ|PROT_EXEC )!=0 ){
 		fprintf( stderr,"harness: mprotect failed\n" );
 		munmap( mem,mapSize );
 		return nullptr;

@@ -129,6 +129,23 @@ struct Prog{
 		}
 		mod.emitBytes( buf.data()+at,(int)buf.size()-at );
 
+		//Data section (commit 8): its own pages so it stays writable.
+		const std::vector<unsigned char> &d=cg->data();
+		int dataBase=0;
+		if( !d.empty() ){
+			mod.beginData();
+			dataBase=mod.getPC();
+			mod.emitBytes( &d[0],(int)d.size() );
+			const std::vector<std::pair<string,int> > &ds=cg->dataSymbols();
+			for( size_t i=0;i<ds.size();++i ){
+				mod.addDataSymbol( ds[i].first.c_str(),dataBase+ds[i].second );
+			}
+			const std::vector<Codegen_x64::Fixup> &df=cg->dataFixups();
+			for( size_t i=0;i<df.size();++i ){
+				mod.addReloc( df[i].sym.c_str(),dataBase+df[i].offset,ABS64 );
+			}
+		}
+
 		const std::vector<Codegen_x64::Fixup> &fx=cg->fixups();
 		for( size_t i=0;i<fx.size();++i ){
 			RelocKind k=fx[i].kind==Codegen_x64::FIX_ABS64 ? ABS64 :

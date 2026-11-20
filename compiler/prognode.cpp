@@ -101,7 +101,7 @@ void ProgNode::translate( Codegen *g,const vector<UserFunc> &usrfuncs ){
 
 		libFuncs[fn.lib].push_back( k );
 
-		g->i_data( 0,"_f"+fn.ident );
+		g->null_data( "_f"+fn.ident );
 	}
 
 	//LIBS chunk

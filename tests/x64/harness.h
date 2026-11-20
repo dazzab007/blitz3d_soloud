@@ -41,8 +41,17 @@ public:
 	//Current position (byte offset from start).
 	int getPC()const{ return (int)m_code.size(); }
 
+	//Start the data section: pad with zeros to a page boundary and remember
+	//where it starts. The loader keeps pages from here on writable (globals,
+	//type descriptors); everything before is made read+execute. Symbols and
+	//relocs added afterwards use absolute module offsets as usual.
+	void beginData();
+	int textSize()const{ return m_textSize<0 ? (int)m_code.size() : m_textSize; }
+
 	//Define a symbol at the current position.
 	bool addSymbol( const char *sym );
+	//Define a symbol at an absolute offset (data labels).
+	bool addDataSymbol( const char *sym,int offset );
 
 	//Add a relocation: patch m_code[offset] with the address of sym.
 	//For REL32: writes (sym_addr - (base + offset + 4)) as int32.
@@ -61,6 +70,7 @@ public:
 
 private:
 	std::vector<uint8_t> m_code;
+	int m_textSize;		//-1: no data section
 	std::map<std::string,int> m_symbols;	//name -> offset in m_code
 	std::vector<Reloc> m_relocs;
 };
