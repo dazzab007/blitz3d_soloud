@@ -44,6 +44,8 @@ static Environ *makeRuntimeEnviron(){
 
 static void resetRuntime(){
 	g_out.clear();g_rtError.clear();g_strings=0;g_objects=0;
+	g_dbgEnter.clear();g_dbgLeave=0;g_dbgPos.clear();g_dbgFile.clear();
+	g_dbgStmtHook=0;g_dbgEnterHook=0;g_dbgMisaligned=0;
 	s_handleMap.clear();s_objMap.clear();s_dataPtr=0;
 }
 
@@ -51,7 +53,7 @@ static void resetRuntime(){
 //(message in g_compileError). Runtime errors end the run with g_rtError set.
 static string g_compileError;
 static const char *g_current="";
-static bool runSource( const char *src,bool debug=false ){
+static bool runSource( const char *src,bool debug=false,void (*stmtHook)( int )=0 ){
 	resetRuntime();
 	g_compileError.clear();
 	std::istringstream in( src );
@@ -82,6 +84,7 @@ static bool runSource( const char *src,bool debug=false ){
 	if( !p.link( rtStubMap() ) ){ g_compileError="link failed";return false; }
 	void (*main_)()=(void(*)())p.sym( "__MAIN" );
 	if( !main_ ){ g_compileError="no __MAIN";return false; }
+	g_dbgStmtHook=stmtHook;
 	jmp_buf jb;
 	g_rtJmp=&jb;
 	if( !setjmp( jb ) ) main_();
@@ -89,21 +92,40 @@ static bool runSource( const char *src,bool debug=false ){
 	return true;
 }
 
-//Run src, expect exactly `want` on Print.
-static void expect( const char *name,const char *src,const char *want ){
-	g_current=name;if( getenv( "X64_VERBOSE" ) ) printf( "[%s]\n",name );
-	bool ok=runSource( src );
+//Run src, expect exactly `want` on Print. Every program is run twice, as a
+//release and as a debug build (commit 10): the output must be identical, and
+//the debug run must have balanced DebugEnter/DebugLeave calls.
+static void expectMode( const char *name,const char *src,const char *want,bool debug ){
+	bool ok=runSource( src,debug );
 	++tests_run;
+	string tag=string( name )+(debug ? " [debug]" : "");
 	if( !ok ){
 		++tests_failed;
-		printf( "FAIL %s: %s\n",name,g_compileError.c_str() );
+		printf( "FAIL %s: %s\n",tag.c_str(),g_compileError.c_str() );
 		return;
 	}
 	if( g_out!=want || g_rtError.size() ){
 		++tests_failed;
-		printf( "FAIL %s:\n--- got ---\n%s%s\n--- want ---\n%s\n",name,g_out.c_str(),
+		printf( "FAIL %s:\n--- got ---\n%s%s\n--- want ---\n%s\n",tag.c_str(),g_out.c_str(),
 			g_rtError.size() ? ("[runtime error: "+g_rtError+"]").c_str() : "",want );
+		return;
 	}
+	if( debug ){
+		++tests_run;
+		if( g_dbgEnter.empty() || (int)g_dbgEnter.size()!=g_dbgLeave || g_dbgPos.empty() || g_dbgMisaligned ){
+			++tests_failed;
+			printf( "FAIL %s: debug calls enter=%d leave=%d stmts=%d misaligned=%d\n",tag.c_str(),
+				(int)g_dbgEnter.size(),g_dbgLeave,(int)g_dbgPos.size(),g_dbgMisaligned );
+		}
+	}else if( g_dbgEnter.size() || g_dbgPos.size() || g_dbgLeave ){
+		++tests_run;++tests_failed;
+		printf( "FAIL %s: release build made debug calls\n",tag.c_str() );
+	}
+}
+static void expect( const char *name,const char *src,const char *want ){
+	g_current=name;if( getenv( "X64_VERBOSE" ) ) printf( "[%s]\n",name );
+	expectMode( name,src,want,false );
+	expectMode( name,src,want,true );
 }
 
 //Run src, expect the run to stop with a runtime error containing `err`.
@@ -387,13 +409,79 @@ static void test_programs(){
 	}
 }
 
+//Debug builds (commit 10): the front end emits __bbDebugEnter(frame,env,name),
+//__bbDebugStmt(pos,file) and __bbDebugLeave(); the backend has to pass them the
+//right values. (x86 emits nothing extra in the backend: it is all front-end IR.)
+static std::vector<std::pair<int,int> > g_snap;
+static void snapLocals( int ){
+	if( g_dbgEnter.empty() ) return;
+	const char *fp=(const char*)g_dbgEnter.back().frame;
+	//the first two locals of the innermost entered function: [frame-8], [frame-16]
+	g_snap.push_back( std::make_pair( *(const int*)( fp-8 ),*(const int*)( fp-16 ) ) );
+}
+static void test_debug(){
+	//frame pointer = the function's frame base: locals are at frame-8*(k+1)
+	{
+		g_snap.clear();
+		bool ok=runSource(
+			"Function f(n)\n Local a=7\n Local b=n\n Print a+b\nEnd Function\n"
+			"f(5)\n",true,snapLocals );
+		++tests_run;
+		bool found=false;
+		for( size_t k=0;k<g_snap.size();++k ) if( g_snap[k].first==7 && g_snap[k].second==5 ) found=true;
+		if( !ok || g_out!="12\n" || !found ){
+			++tests_failed;
+			printf( "FAIL debug_frame: %s out='%s' snapshots=%d found=%d\n",g_compileError.c_str(),g_out.c_str(),(int)g_snap.size(),found );
+		}
+	}
+	//env ids, names, file and positions
+	{
+		bool ok=runSource( "Function fact(n)\n If n<=1 Then Return 1\n Return n*fact(n-1)\nEnd Function\nPrint fact(4)\n",true );
+		++tests_run;
+		bool good=ok && g_out=="24\n" && g_dbgEnter.size()==5 && (int)g_dbgEnter.size()==g_dbgLeave;
+		if( good ){
+			int mainEnv=g_dbgEnter[0].env,fEnv=g_dbgEnter[1].env;
+			//main enters first (the function body runs from main), then 4 fact frames
+			good=g_dbgEnter[0].func=="<main program>" && mainEnv>0 && fEnv>0 && mainEnv!=fEnv;
+			for( int k=1;k<5;++k ) good=good && g_dbgEnter[k].func=="fact" && g_dbgEnter[k].env==fEnv;
+			//the frames of nested calls are strictly below each other
+			for( int k=2;k<5;++k ) good=good && g_dbgEnter[k].frame<g_dbgEnter[k-1].frame;
+			good=good && g_dbgEnter[0].frame>g_dbgEnter[1].frame;
+		}
+		good=good && g_dbgFile=="test.bb" && g_dbgMisaligned==0;
+		if( !good ){
+			++tests_failed;
+			printf( "FAIL debug_env: ok=%d out='%s' enters=%d leaves=%d file='%s' misaligned=%d\n",ok,g_out.c_str(),
+				(int)g_dbgEnter.size(),g_dbgLeave,g_dbgFile.c_str(),g_dbgMisaligned );
+		}
+	}
+	{
+		//positions are (row<<16)|col of each executed statement, in order
+		bool ok=runSource( "a=1\nb=2\nc=3\n",true );
+		++tests_run;
+		bool good=ok && g_dbgPos.size()>=3;
+		if( good ){
+			std::vector<int> rows;
+			for( size_t k=0;k<g_dbgPos.size();++k ) rows.push_back( g_dbgPos[k]>>16 );
+			good=rows[0]==0 && rows[1]==1 && rows[2]==2;
+		}
+		if( !good ){
+			++tests_failed;
+			printf( "FAIL debug_positions: ok=%d n=%d\n",ok,(int)g_dbgPos.size() );
+		}
+	}
+	//a runtime error from a debug check still calls Leave-free abort cleanly
+	//(covered by the expectError tests: type_null, dim_bounds, vec_bounds)
+}
+
 int main( int argc,char **argv ){
 	setvbuf( stdout,0,_IONBF,0 );
-	//debugging aid: test_frontend_x64 file.bb runs one program and prints its output
+	//debugging aid: test_frontend_x64 file.bb [-d] runs one program and prints its output
 	if( argc>1 ){
+		bool dbg=argc>2 && !strcmp( argv[2],"-d" );
 		std::ifstream f( argv[1] );
 		std::stringstream ss;ss<<f.rdbuf();
-		bool ok=runSource( ss.str().c_str() );
+		bool ok=runSource( ss.str().c_str(),dbg );
 		printf( "%s%s%s\n",g_out.c_str(),ok ? "" : g_compileError.c_str(),g_rtError.c_str() );
 		return ok ? 0 : 1;
 	}
@@ -407,6 +495,7 @@ int main( int argc,char **argv ){
 	test_arrays();
 	test_data();
 	test_programs();
+	test_debug();
 	printf( "test_frontend_x64: %d checks, %d failed\n",tests_run,tests_failed );
 	return tests_failed?1:0;
 }

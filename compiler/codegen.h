@@ -53,6 +53,9 @@ inline bool isWideNode( TNode *t ){
 		return isWideNode( t->l ) || isWideNode( t->r );
 	case IR_NEG:case IR_SHL:case IR_SHR:case IR_SAR:
 		return isWideNode( t->l );
+	case IR_JUMPT:case IR_JUMPF:case IR_JUMPGE:
+		//debug-build checks wrap a value: x86 leaves the tested operand in eax
+		return isWideNode( t->l );
 	case IR_SEQ:
 		return t->r ? isWideNode( t->r ) : isWideNode( t->l );
 	default:

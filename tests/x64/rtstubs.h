@@ -33,7 +33,21 @@ static std::string g_rtError;
 static jmp_buf *g_rtJmp=0;
 static int g_strings;	//live strings (leak check)
 static int g_objects;	//live (undeleted) objects
-static std::vector<std::string> g_debugLog;	//__bbDebugStmt etc. (commit 10)
+
+//Debug-build calls (commit 10): what the compiled code passes to
+//__bbDebugEnter/__bbDebugLeave/__bbDebugStmt.
+struct DebugEnterRec{ void *frame;int env;std::string func; };
+static std::vector<DebugEnterRec> g_dbgEnter;
+static int g_dbgLeave;
+static std::vector<int> g_dbgPos;			//statement positions, in order
+static std::string g_dbgFile;				//file name seen by DebugStmt
+static void (*g_dbgStmtHook)( int pos )=0;	//lets a test inspect state at a statement
+static void (*g_dbgEnterHook)( void *frame )=0;
+static int g_dbgMisaligned;					//debug calls entered with a misaligned stack
+__attribute__((noinline)) static void dbgNoteAlignment(){
+	//after `call` + the stub's own push rbp, a correctly aligned caller gives 16-aligned rbp
+	if( ((uintptr_t)__builtin_frame_address( 0 )&15)!=0 ) ++g_dbgMisaligned;
+}
 
 static void rtError( const char *msg ){
 	g_rtError=msg;
@@ -241,9 +255,26 @@ static float rt_FPow( float x,float y ){ return (float)pow( x,y ); }
 
 //---- misc internals ----
 static void rt_LoadLibs( void * ){}
-static void rt_DebugEnter( void *,int,const char * ){}
-static void rt_DebugLeave(){}
-static void rt_DebugStmt( int,const char * ){}
+static void rt_DebugEnter( void *frame,int env,const char *func ){
+	dbgNoteAlignment();
+	DebugEnterRec r;r.frame=frame;r.env=env;r.func=func ? func : "(null)";
+	g_dbgEnter.push_back( r );
+	if( g_dbgEnterHook ) g_dbgEnterHook( frame );
+}
+static void rt_DebugLeave(){
+	dbgNoteAlignment();++g_dbgLeave;
+	//A real runtime function may use any caller-saved register. The compiled
+	//function's return value (rax / xmm0) must survive this call, which runs
+	//in the leave() cleanup: make the stub trash them.
+	__asm__ volatile( "movl $0x7badf00d,%%eax\n\txorps %%xmm0,%%xmm0\n\txorps %%xmm1,%%xmm1"
+		::: "rax","xmm0","xmm1","memory" );
+}
+static void rt_DebugStmt( int pos,const char *file ){
+	dbgNoteAlignment();
+	g_dbgPos.push_back( pos );
+	g_dbgFile=file ? file : "(null)";
+	if( g_dbgStmtHook ) g_dbgStmtHook( pos );
+}
 
 //---- BASIC commands used by the tests ----
 static void cmd_Print( S s ){ g_out+=*s;g_out+="\n";rt_StrRelease( s ); }
