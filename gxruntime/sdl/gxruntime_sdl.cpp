@@ -7,6 +7,7 @@
 #include "../gxgraphics.h"
 #include "gxruntime_sdl.h"
 #include "gxsurface_sdl.h"
+#include "gxgl_sdl.h"
 #include <SDL.h>
 #define GL_SILENCE_DEPRECATION
 #include <OpenGL/gl3.h>
@@ -174,6 +175,11 @@ static void mapMouse( int *x,int *y ){
 	*x=mx;*y=my;
 }
 
+bool gxSdlMakeGLCurrent(){
+	if( !s_screen.gl || s_screen.headless ) return false;
+	return SDL_GL_MakeCurrent( s_screen.win,s_screen.gl )==0;
+}
+
 static bool s_shotWanted=false,s_shotValid=false;
 static int s_shotW=0,s_shotH=0;
 static std::vector<unsigned> s_shot;
@@ -201,6 +207,11 @@ static void present( gxGraphics *g,bool vsync ){
 	SDL_GetWindowSize( s_screen.win,&ww,&wh );
 	float px=ww ? (float)dw/ww : 1,py=wh ? (float)dh/wh : 1;	//drawable pixels per window point
 
+	//the 3D pipeline leaves its state behind: put the default framebuffer back to plain
+	glBindFramebuffer( GL_FRAMEBUFFER,0 );
+	glDisable( GL_DEPTH_TEST );glDisable( GL_CULL_FACE );glDisable( GL_BLEND );glDisable( GL_SCISSOR_TEST );
+	glPolygonMode( GL_FRONT_AND_BACK,GL_FILL );
+	glColorMask( GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE );
 	glViewport( 0,0,dw,dh );
 	glClearColor( 0,0,0,1 );
 	glClear( GL_COLOR_BUFFER_BIT );

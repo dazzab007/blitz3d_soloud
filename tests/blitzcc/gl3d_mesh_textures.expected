@@ -1,0 +1,8 @@
+verts 4 tris 2
+texture size 4x4
+left red: 1
+right green: 1
+shifted left green: 1
+npot 8x4
+vertex colour: 1
+vertex 2,2

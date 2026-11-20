@@ -146,6 +146,12 @@ private:
 	};
 	TexState texstate[MAX_TEXTURES];
 	int n_texs,tris_drawn;
+#ifndef _WIN32
+public:
+	struct GLState;		//OpenGL pipeline state (gxruntime/sdl/gxscene_gl.cpp), opaque
+private:
+	GLState *gl;
+#endif
 
 	std::set<gxLight*> _allLights;
 	std::vector<gxLight*> _curLights;

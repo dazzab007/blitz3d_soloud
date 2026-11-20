@@ -17,6 +17,7 @@ bool stream_create();  bool stream_destroy();  void stream_link( void (*)( const
 bool filesystem_create();  bool filesystem_destroy();  void filesystem_link( void (*)( const char *,void * ) );
 bool input_create();   bool input_destroy();   void input_link( void (*)( const char *,void * ) );
 bool graphics_create();  bool graphics_destroy();  void graphics_link( void (*)( const char *,void * ) );
+bool blitz3d_create();   bool blitz3d_destroy();   void blitz3d_link( void (*)( const char *,void * ) );
 void bbcmds_link( void (*)( const char *,void * ) );
 bool bank_create();    bool bank_destroy();    void bank_link( void (*)( const char *,void * ) );
 
@@ -25,10 +26,6 @@ bool bank_create();    bool bank_destroy();    void bank_link( void (*)( const c
 //reported by bbhost_run's caller.
 bool debug=false;
 gxRuntime *gx_runtime=0;
-
-//The 3D module (bbblitz3d.cpp) is not linked yet: Graphics3D opens a 2D screen only.
-void blitz3d_open(){}
-void blitz3d_close(){}
 
 //---- console commands (stand in for the graphics Print until Prompt 5) ----
 static void bbConsolePrint( BBStr *s ){
@@ -135,6 +132,7 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ),bool console ){
 		rtSym( "$Input$prompt=\"\"",RTSYM_CAST( bbConsoleInput ) );
 	}else{
 		graphics_link( rtSym );
+		blitz3d_link( rtSym );
 	}
 	rtSym( "_bbLoadLibs",RTSYM_CAST( bbLoadLibs ) );
 	rtSym( "_bbStrToCStr",RTSYM_CAST( bbStrToCStr ) );
@@ -160,6 +158,7 @@ bool bbhost_create( bool dbg,bool console,const char **err ){
 	else if( !filesystem_create() ) e="filesystem_create failed";
 	else if( !console && !graphics_create() ) e="Unable to open the graphics window";
 	else if( !input_create() ) e="input_create failed";
+	else if( !console && !blitz3d_create() ) e="blitz3d_create failed";
 	if( e ){
 		if( err ) *err=e;
 		return false;
@@ -168,6 +167,7 @@ bool bbhost_create( bool dbg,bool console,const char **err ){
 }
 
 void bbhost_destroy(){
+	if( !s_console ) blitz3d_destroy();
 	input_destroy();
 	if( !s_console ) graphics_destroy();
 	filesystem_destroy();

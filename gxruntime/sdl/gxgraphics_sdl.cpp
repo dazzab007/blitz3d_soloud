@@ -7,6 +7,7 @@
 #include "../gxruntime.h"
 #include "gxsurface_sdl.h"
 #include "gxruntime_sdl.h"
+#include "gxgl_sdl.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_STDIO_BUT_FILE_OK
@@ -103,8 +104,20 @@ gxMovie *gxGraphics::openMovie( const std::string &file,int flags ){ return 0; }
 gxMovie *gxGraphics::verifyMovie( gxMovie *m ){ return movie_set.count( m ) ? m : 0; }
 void gxGraphics::closeMovie( gxMovie *m ){ if( movie_set.erase( m ) ) delete m; }
 
+//Textures get power-of-two sizes, as the D3D version always makes them
+static int pow2( int n ){
+	int p=1;
+	while( p<n ) p<<=1;
+	return p;
+}
+
 ddSurf *gxGraphics::createSurface( int w,int h,int flags ){
 	if( w<=0 || h<=0 || (long long)w*h>(1LL<<28) ) return 0;
+	if( flags & gxCanvas::CANVAS_TEXTURE ){
+		w=pow2( w );h=pow2( h );
+		if( w>8192 ) w=8192;
+		if( h>8192 ) h=8192;
+	}
 	return new GxNativeSurface( w,h );
 }
 
@@ -115,12 +128,52 @@ ddSurf *gxGraphics::loadSurface( const std::string &f,int flags ){
 	unsigned char *data=stbi_load( f.c_str(),&w,&h,&n,4 );
 	if( !data ) return 0;
 	GxNativeSurface *s=new GxNativeSurface( w,h );
-	bool keepAlpha=(flags & gxCanvas::CANVAS_TEXTURE) && (flags & gxCanvas::CANVAS_TEX_ALPHA) && n==4;
+	bool hasAlpha=(n==4);	//the file carries an alpha channel
+	bool texture=(flags & gxCanvas::CANVAS_TEXTURE)!=0;
 	for( size_t k=0;k<(size_t)w*h;++k ){
-		unsigned r=data[k*4],g=data[k*4+1],b=data[k*4+2],a=keepAlpha ? data[k*4+3] : 0xff;
+		unsigned r=data[k*4],g=data[k*4+1],b=data[k*4+2],a=0xff;
+		if( texture && (flags & gxCanvas::CANVAS_TEX_ALPHA) ){
+			if( flags & gxCanvas::CANVAS_TEX_MASK ){
+				a=(r|g|b) ? 0xff : 0;							//black is the mask colour: transparent
+			}else if( hasAlpha ){
+				a=data[k*4+3];									//the file's own alpha
+			}else{
+				a=(r+g+b)/3;									//alpha from intensity ...
+				if( !(flags & gxCanvas::CANVAS_TEX_RGB) ) r=g=b=255;	//... with white colour for alpha-only textures
+			}
+		}
 		s->pixels[k]=(a<<24)|(r<<16)|(g<<8)|b;
 	}
 	stbi_image_free( data );
+	if( texture ){
+		//stretch to the power-of-two texture size (bilinear)
+		int tw=pow2( w ),th=pow2( h );
+		if( tw>8192 ) tw=8192;
+		if( th>8192 ) th=8192;
+		if( tw!=w || th!=h ){
+			GxNativeSurface *t=new GxNativeSurface( tw,th );
+			for( int y=0;y<th;++y ){
+				float fy=(y+.5f)*h/th-.5f;
+				int y0=(int)floorf( fy );float wy=fy-y0;
+				int y1=y0+1;if( y0<0 ) y0=0;if( y1>=h ) y1=h-1;if( y0>=h ) y0=h-1;
+				for( int x=0;x<tw;++x ){
+					float fx=(x+.5f)*w/tw-.5f;
+					int x0=(int)floorf( fx );float wx=fx-x0;
+					int x1=x0+1;if( x0<0 ) x0=0;if( x1>=w ) x1=w-1;if( x0>=w ) x0=w-1;
+					unsigned out=0;
+					for( int sh=0;sh<32;sh+=8 ){
+						float c00=(s->pixels[(size_t)y0*w+x0]>>sh)&0xff,c10=(s->pixels[(size_t)y0*w+x1]>>sh)&0xff;
+						float c01=(s->pixels[(size_t)y1*w+x0]>>sh)&0xff,c11=(s->pixels[(size_t)y1*w+x1]>>sh)&0xff;
+						float c=(c00*(1-wx)+c10*wx)*(1-wy)+(c01*(1-wx)+c11*wx)*wy;
+						out|=((unsigned)(c+.5f)&0xff)<<sh;
+					}
+					t->pixels[(size_t)y*tw+x]=out;
+				}
+			}
+			delete s;
+			s=t;
+		}
+	}
 	return s;
 }
 
@@ -331,9 +384,40 @@ void gxGraphics::freeFont( gxFont *f ){
 /////////////////////////////////
 // 3D: scenes and meshes (later) //
 /////////////////////////////////
-gxScene *gxGraphics::createScene( int flags ){ return 0; }
-gxScene *gxGraphics::verifyScene( gxScene *s ){ return scene_set.count( s ) ? s : 0; }
-void gxGraphics::freeScene( gxScene *scene ){}
-gxMesh *gxGraphics::createMesh( int max_verts,int max_tris,int flags ){ return 0; }
-gxMesh *gxGraphics::verifyMesh( gxMesh *m ){ return mesh_set.count( m ) ? m : 0; }
-void gxGraphics::freeMesh( gxMesh *mesh ){}
+//One scene at a time, rendering into the back buffer. Needs an OpenGL context:
+//without one (headless) 3D is unavailable and this returns 0.
+gxScene *gxGraphics::createScene( int flags ){
+	if( scene_set.size() ) return 0;
+	if( !gxSdlMakeGLCurrent() ) return 0;
+	gxScene *scene=new gxScene( this,back_canvas );
+	scene_set.insert( scene );
+	dummy_mesh=createMesh( 8,12,0 );
+	return scene;
+}
+
+gxScene *gxGraphics::verifyScene( gxScene *s ){
+	return scene_set.count( s ) ? s : 0;
+}
+
+void gxGraphics::freeScene( gxScene *scene ){
+	if( !scene_set.erase( scene ) ) return;
+	dummy_mesh=0;
+	while( mesh_set.size() ) freeMesh( *mesh_set.begin() );
+	delete scene;
+}
+
+gxMesh *gxGraphics::createMesh( int max_verts,int max_tris,int flags ){
+	if( max_verts<1 || max_tris<0 ) return 0;
+	unsigned short *indices=new unsigned short[max_tris*3+1];
+	gxMesh *mesh=new gxMesh( this,0,indices,max_verts,max_tris );
+	mesh_set.insert( mesh );
+	return mesh;
+}
+
+gxMesh *gxGraphics::verifyMesh( gxMesh *m ){
+	return mesh_set.count( m ) ? m : 0;
+}
+
+void gxGraphics::freeMesh( gxMesh *mesh ){
+	if( mesh_set.erase( mesh ) ) delete mesh;
+}

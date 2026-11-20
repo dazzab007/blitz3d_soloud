@@ -50,6 +50,11 @@ private:
 	int max_verts,max_tris;
 	bool mesh_dirty;
 	dxVertex *locked_verts;
+#ifndef _WIN32
+	unsigned gl_vao,gl_vbo,gl_ibo;	//OpenGL buffers, created on first render
+	bool gl_stale;					//CPU copy changed since the last upload
+	friend class gxScene;
+#endif
 
 	/***** GX INTERFACE *****/
 public:

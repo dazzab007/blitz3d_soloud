@@ -11,7 +11,11 @@
 #include <cstring>
 #include <algorithm>
 
+#include "gxgl_sdl.h"
+
 extern gxRuntime *gx_runtime;
+
+void (*gxCanvasFreedHook)( gxCanvas *c )=0;
 
 //---- PixelFormat: one fixed 32-bit ARGB format ----
 static void argbPlot( void *pix,unsigned argb ){ *(unsigned*)pix=argb; }
@@ -113,6 +117,7 @@ t_surf(0),cm_mask(0),locked_cnt(0),mod_cnt(0),remip_cnt(0){
 }
 
 gxCanvas::~gxCanvas(){
+	if( gxCanvasFreedHook ) gxCanvasFreedHook( this );
 	delete[] cm_mask;
 	delete main_surf;
 }

@@ -4,6 +4,7 @@
 #   ; flags: -d      extra blitzcc flags
 #   ; rc: 1          expected exit status (default 0)
 #   ; graphics       graphics mode (hidden window, headless); otherwise blitzcc -t
+#   ; graphics3d     3D mode: hidden window with a real OpenGL context (skipped without one)
 #                    (results are reported with DebugLog, which goes to stderr)
 # Every program is also built with `blitzcc -o` and the executable must give the same
 # output and exit status. blitzrun must sit next to blitzcc.
@@ -14,7 +15,7 @@ BLITZCC="$1"
 TESTLIB="$2"
 UPDATE="$3"
 DIR="$(cd "$(dirname "$0")" && pwd)"
-pass=0; fail=0
+pass=0; fail=0; skip=0
 TMP="$(mktemp -d)"
 mkdir -p "$TMP/home/userlibs"
 cp "$DIR"/userlib/*.decls "$TMP/home/userlibs/"
@@ -24,7 +25,11 @@ trap 'rm -rf "$TMP"' EXIT
 for src in "$DIR"/*.bb; do
 	name="$(basename "$src" .bb)"
 	flags="$(sed -n 's/^; flags: *//p' "$src" | head -1)"
-	if grep -q '^; graphics' "$src"; then
+	if grep -q '^; graphics3d' "$src"; then
+		# 3D program: needs a real OpenGL context (hidden window); skipped if there is none
+		export BB_HIDDEN=1
+		unset SDL_VIDEODRIVER
+	elif grep -q '^; graphics' "$src"; then
 		# graphics program: real Graphics/Print on a hidden window with no GL (headless)
 		export BB_HIDDEN=1 SDL_VIDEODRIVER=dummy
 	else
@@ -35,6 +40,9 @@ for src in "$DIR"/*.bb; do
 	want_rc="$(sed -n 's/^; rc: *//p' "$src" | head -1)"
 	[ -z "$want_rc" ] && want_rc=0
 	out="$("$BLITZCC" +q $flags "$src" 2>&1)"; rc=$?
+	case "$out" in
+	*"Unable to create 3D Scene"*) skip=$((skip+1)); echo "SKIP $name (no OpenGL context)"; continue;;
+	esac
 	if [ "$UPDATE" = "--update" ]; then printf '%s\n' "$out" > "$DIR/$name.expected"; fi
 	if [ "$out" = "$(cat "$DIR/$name.expected" 2>/dev/null)" ] && [ "$rc" = "$want_rc" ]; then
 		pass=$((pass+1))
@@ -72,5 +80,5 @@ for bad in nopayload truncated corrupt; do
 	"$TMP/$bad" >/dev/null 2>&1; brc=$?
 	if [ "$brc" = 2 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL malformed executable '$bad' (rc=$brc, want 2)"; fi
 done
-echo "blitzcc: $pass passed, $fail failed"
+echo "blitzcc: $pass passed, $fail failed, $skip skipped"
 [ "$fail" = 0 ]

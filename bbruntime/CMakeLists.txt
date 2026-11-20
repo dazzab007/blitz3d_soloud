@@ -130,7 +130,8 @@ if (BB_PORTABLE_BUILD)
 		../gxruntime/sdl/gxruntime_sdl.cpp ../gxruntime/sdl/gxruntime_sdl.h
 		../gxruntime/sdl/gxinput_sdl.cpp ../gxruntime/sdl/gxtimer_sdl.cpp
 		../gxruntime/sdl/gxfilesystem_posix.cpp ../gxruntime/gxdevice.cpp ../gxruntime/gxfont.cpp
-		../gxruntime/sdl/gxcanvas_sdl.cpp ../gxruntime/sdl/gxgraphics_sdl.cpp ../gxruntime/sdl/gxmovie_sdl.cpp ../gxruntime/sdl/gxsurface_sdl.h)
+		../gxruntime/sdl/gxcanvas_sdl.cpp ../gxruntime/sdl/gxgraphics_sdl.cpp ../gxruntime/sdl/gxmovie_sdl.cpp ../gxruntime/sdl/gxsurface_sdl.h
+		../gxruntime/sdl/gxscene_gl.cpp ../gxruntime/sdl/gxmesh_gl.cpp ../gxruntime/sdl/gxlight_gl.cpp ../gxruntime/sdl/gxgl_sdl.h)
 	bb_target_options(gxruntime_sdl)
 	if (TARGET SDL2::SDL2)
 		target_link_libraries(gxruntime_sdl PUBLIC SDL2::SDL2 "-framework OpenGL")
@@ -143,6 +144,10 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_gxgraphics_sdl)
 	target_link_libraries(test_gxgraphics_sdl gxruntime_sdl)
 
+	add_executable(test_gxscene_gl ../tests/gx/test_gxscene_gl.cpp)
+	bb_target_options(test_gxscene_gl)
+	target_link_libraries(test_gxscene_gl gxruntime_sdl)
+
 	add_executable(test_gxruntime_sdl ../tests/gx/test_gxruntime_sdl.cpp)
 	bb_target_options(test_gxruntime_sdl)
 	target_link_libraries(test_gxruntime_sdl gxruntime_sdl)
@@ -153,14 +158,20 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(x64link)
 	target_link_libraries(x64link codegen_x64)
 
+	# The 3D command module (entities, cameras, lights, meshes, textures ...), only
+	# linked into the macOS host (the unit tests compile bbblitz3d.cpp against stubs).
+	add_library(bbruntime_3d bbblitz3d.cpp)
+	bb_target_options(bbruntime_3d)
+	target_link_libraries(bbruntime_3d bbruntime_core blitz3d)
+
 	# blitzcc for macOS: compile a .bb and run it in-process (Prompt 4 step 3).
 	add_executable(blitzcc ../blitz/main_mac.cpp)
 	bb_target_options(blitzcc)
-	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core gxruntime_sdl)
+	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core bbruntime_3d gxruntime_sdl)
 	# blitzrun: the launcher `blitzcc -o` copies in front of a compiled program.
 	add_executable(blitzrun ../blitz/blitzrun_mac.cpp)
 	bb_target_options(blitzrun)
-	target_link_libraries(blitzrun x64link bbruntime_core gxruntime_sdl)
+	target_link_libraries(blitzrun x64link bbruntime_core bbruntime_3d gxruntime_sdl)
 	add_dependencies(blitzcc blitzrun)
 	# `cmake --build build --target check_blitzcc`: run tests/blitzcc/*.bb through blitzcc.
 	add_library(blitztestlib SHARED ../tests/blitzcc/userlib/blitztestlib.cpp)

@@ -17,6 +17,16 @@ public:
 
 #ifdef _WIN32
 	D3DLIGHT7 d3d_light;
+#else
+	//what the GL pipeline needs (mirrors D3DLIGHT7 as gxlight.cpp sets it up)
+	struct GLLight{
+		int type;				//LIGHT_DISTANT/POINT/SPOT
+		float color[3];
+		float position[3];		//world space
+		float direction[3];		//world space, the way the light travels
+		float atten1;			//1/range: attenuation = 1/(atten1*distance)
+		float theta,phi;		//inner/outer cone (full angles, radians)
+	}gl_light;
 #endif
 
 private:
