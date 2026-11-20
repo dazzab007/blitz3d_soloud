@@ -1,6 +1,7 @@
 
 #include "std.h"
 #include "bbsys.h"
+#include "bb_handle.h"
 
 gxInput *gx_input;
 gxDevice *gx_mouse;
@@ -240,48 +241,48 @@ int  bbDirectInputEnabled(){
 }
 
 void input_link( void (*rtSym)( const char *sym,void *pc ) ){
-	rtSym( "%KeyDown%key",bbKeyDown );
-	rtSym( "%KeyHit%key",bbKeyHit );
-	rtSym( "%GetKey",bbGetKey );
-	rtSym( "%WaitKey",bbWaitKey );
-	rtSym( "FlushKeys",bbFlushKeys );
+	rtSym( "%KeyDown%key",RTSYM_CAST( bbKeyDown ) );
+	rtSym( "%KeyHit%key",RTSYM_CAST( bbKeyHit ) );
+	rtSym( "%GetKey",RTSYM_CAST( bbGetKey ) );
+	rtSym( "%WaitKey",RTSYM_CAST( bbWaitKey ) );
+	rtSym( "FlushKeys",RTSYM_CAST( bbFlushKeys ) );
 
-	rtSym( "%MouseDown%button",bbMouseDown );
-	rtSym( "%MouseHit%button",bbMouseHit );
-	rtSym( "%GetMouse",bbGetMouse );
-	rtSym( "%WaitMouse",bbWaitMouse );
-	rtSym( "%MouseWait",bbWaitMouse );
-	rtSym( "%MouseX",bbMouseX );
-	rtSym( "%MouseY",bbMouseY );
-	rtSym( "%MouseZ",bbMouseZ );
-	rtSym( "%MouseXSpeed",bbMouseXSpeed );
-	rtSym( "%MouseYSpeed",bbMouseYSpeed );
-	rtSym( "%MouseZSpeed",bbMouseZSpeed );
-	rtSym( "FlushMouse",bbFlushMouse );
-	rtSym( "MoveMouse%x%y",bbMoveMouse );
+	rtSym( "%MouseDown%button",RTSYM_CAST( bbMouseDown ) );
+	rtSym( "%MouseHit%button",RTSYM_CAST( bbMouseHit ) );
+	rtSym( "%GetMouse",RTSYM_CAST( bbGetMouse ) );
+	rtSym( "%WaitMouse",RTSYM_CAST( bbWaitMouse ) );
+	rtSym( "%MouseWait",RTSYM_CAST( bbWaitMouse ) );
+	rtSym( "%MouseX",RTSYM_CAST( bbMouseX ) );
+	rtSym( "%MouseY",RTSYM_CAST( bbMouseY ) );
+	rtSym( "%MouseZ",RTSYM_CAST( bbMouseZ ) );
+	rtSym( "%MouseXSpeed",RTSYM_CAST( bbMouseXSpeed ) );
+	rtSym( "%MouseYSpeed",RTSYM_CAST( bbMouseYSpeed ) );
+	rtSym( "%MouseZSpeed",RTSYM_CAST( bbMouseZSpeed ) );
+	rtSym( "FlushMouse",RTSYM_CAST( bbFlushMouse ) );
+	rtSym( "MoveMouse%x%y",RTSYM_CAST( bbMoveMouse ) );
 
-	rtSym( "%JoyType%port=0",bbJoyType );
-	rtSym( "%JoyDown%button%port=0",bbJoyDown );
-	rtSym( "%JoyHit%button%port=0",bbJoyHit );
-	rtSym( "%GetJoy%port=0",bbGetJoy );
-	rtSym( "%WaitJoy%port=0",bbWaitJoy );
-	rtSym( "%JoyWait%port=0",bbWaitJoy );
-	rtSym( "#JoyX%port=0",bbJoyX );
-	rtSym( "#JoyY%port=0",bbJoyY );
-	rtSym( "#JoyZ%port=0",bbJoyZ );
-	rtSym( "#JoyU%port=0",bbJoyU );
-	rtSym( "#JoyV%port=0",bbJoyV );
-	rtSym( "#JoyPitch%port=0",bbJoyPitch );
-	rtSym( "#JoyYaw%port=0",bbJoyYaw );
-	rtSym( "#JoyRoll%port=0",bbJoyRoll );
-	rtSym( "%JoyHat%port=0",bbJoyHat );
-	rtSym( "%JoyXDir%port=0",bbJoyXDir );
-	rtSym( "%JoyYDir%port=0",bbJoyYDir );
-	rtSym( "%JoyZDir%port=0",bbJoyZDir );
-	rtSym( "%JoyUDir%port=0",bbJoyUDir );
-	rtSym( "%JoyVDir%port=0",bbJoyVDir );
-	rtSym( "FlushJoy",bbFlushJoy );
+	rtSym( "%JoyType%port=0",RTSYM_CAST( bbJoyType ) );
+	rtSym( "%JoyDown%button%port=0",RTSYM_CAST( bbJoyDown ) );
+	rtSym( "%JoyHit%button%port=0",RTSYM_CAST( bbJoyHit ) );
+	rtSym( "%GetJoy%port=0",RTSYM_CAST( bbGetJoy ) );
+	rtSym( "%WaitJoy%port=0",RTSYM_CAST( bbWaitJoy ) );
+	rtSym( "%JoyWait%port=0",RTSYM_CAST( bbWaitJoy ) );
+	rtSym( "#JoyX%port=0",RTSYM_CAST( bbJoyX ) );
+	rtSym( "#JoyY%port=0",RTSYM_CAST( bbJoyY ) );
+	rtSym( "#JoyZ%port=0",RTSYM_CAST( bbJoyZ ) );
+	rtSym( "#JoyU%port=0",RTSYM_CAST( bbJoyU ) );
+	rtSym( "#JoyV%port=0",RTSYM_CAST( bbJoyV ) );
+	rtSym( "#JoyPitch%port=0",RTSYM_CAST( bbJoyPitch ) );
+	rtSym( "#JoyYaw%port=0",RTSYM_CAST( bbJoyYaw ) );
+	rtSym( "#JoyRoll%port=0",RTSYM_CAST( bbJoyRoll ) );
+	rtSym( "%JoyHat%port=0",RTSYM_CAST( bbJoyHat ) );
+	rtSym( "%JoyXDir%port=0",RTSYM_CAST( bbJoyXDir ) );
+	rtSym( "%JoyYDir%port=0",RTSYM_CAST( bbJoyYDir ) );
+	rtSym( "%JoyZDir%port=0",RTSYM_CAST( bbJoyZDir ) );
+	rtSym( "%JoyUDir%port=0",RTSYM_CAST( bbJoyUDir ) );
+	rtSym( "%JoyVDir%port=0",RTSYM_CAST( bbJoyVDir ) );
+	rtSym( "FlushJoy",RTSYM_CAST( bbFlushJoy ) );
 
-	rtSym( "EnableDirectInput%enable",bbEnableDirectInput );
-	rtSym( "%DirectInputEnabled",bbDirectInputEnabled );
+	rtSym( "EnableDirectInput%enable",RTSYM_CAST( bbEnableDirectInput ) );
+	rtSym( "%DirectInputEnabled",RTSYM_CAST( bbDirectInputEnabled ) );
 }

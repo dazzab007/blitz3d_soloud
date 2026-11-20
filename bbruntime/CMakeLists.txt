@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(bbruntime)
 
 # Portable bbruntime sources: compile on macOS without Windows headers.
-set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp bberr.cpp bbhost.cpp)
+set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp bberr.cpp bbhost.cpp bbinput.cpp bbcmds_mac.cpp)
 
 set(SRCS
 	basic.h
@@ -29,7 +29,6 @@ set(LIBS gxruntime)
 if (BB_BLITZ3D_ENABLED)
 
 	set(SRCS ${SRCS}
-        bbinput.cpp
         bbinput.h
         bbblitz3d.cpp
         bbblitz3d.h
@@ -119,6 +118,30 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_bbaudio)
 	target_link_libraries(test_bbaudio bbruntime_core)
 
+	# SDL2 gxRuntime (Prompt 5): events, time, timers, input, file system, display
+	# enumeration. SDL2 comes from the system (Homebrew) or, failing that, FetchContent.
+	find_package(SDL2 QUIET)
+	if (NOT SDL2_FOUND)
+		include(FetchContent)
+		FetchContent_Declare(SDL2 GIT_REPOSITORY https://github.com/libsdl-org/SDL.git GIT_TAG release-2.30.9)
+		FetchContent_MakeAvailable(SDL2)
+	endif ()
+	add_library(gxruntime_sdl
+		../gxruntime/sdl/gxruntime_sdl.cpp ../gxruntime/sdl/gxruntime_sdl.h
+		../gxruntime/sdl/gxinput_sdl.cpp ../gxruntime/sdl/gxtimer_sdl.cpp
+		../gxruntime/sdl/gxfilesystem_posix.cpp ../gxruntime/gxdevice.cpp)
+	bb_target_options(gxruntime_sdl)
+	if (TARGET SDL2::SDL2)
+		target_link_libraries(gxruntime_sdl PUBLIC SDL2::SDL2)
+	else ()
+		target_include_directories(gxruntime_sdl PUBLIC ${SDL2_INCLUDE_DIRS})
+		target_link_libraries(gxruntime_sdl PUBLIC ${SDL2_LIBRARIES})
+	endif ()
+
+	add_executable(test_gxruntime_sdl ../tests/gx/test_gxruntime_sdl.cpp)
+	bb_target_options(test_gxruntime_sdl)
+	target_link_libraries(test_gxruntime_sdl gxruntime_sdl)
+
 	# x86-64 module + loader (mmap/mprotect, relocations) and the codegen export:
 	# promoted from the test harness (Prompt 4 step 3).
 	add_library(x64link ../linker/x64module.cpp ../linker/x64module.h ../linker/x64export.cpp ../linker/x64export.h ../linker/x64exe.cpp ../linker/x64exe.h)
@@ -128,11 +151,11 @@ if (BB_PORTABLE_BUILD)
 	# blitzcc for macOS: compile a .bb and run it in-process (Prompt 4 step 3).
 	add_executable(blitzcc ../blitz/main_mac.cpp)
 	bb_target_options(blitzcc)
-	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core)
+	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core gxruntime_sdl)
 	# blitzrun: the launcher `blitzcc -o` copies in front of a compiled program.
 	add_executable(blitzrun ../blitz/blitzrun_mac.cpp)
 	bb_target_options(blitzrun)
-	target_link_libraries(blitzrun x64link bbruntime_core)
+	target_link_libraries(blitzrun x64link bbruntime_core gxruntime_sdl)
 	add_dependencies(blitzcc blitzrun)
 	# `cmake --build build --target check_blitzcc`: run tests/blitzcc/*.bb through blitzcc.
 	add_library(blitztestlib SHARED ../tests/blitzcc/userlib/blitztestlib.cpp)

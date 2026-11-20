@@ -15,6 +15,8 @@ public:
 
 #ifdef _WIN32
 	static void CALLBACK timerCallback( UINT id,UINT msg,DWORD user,DWORD dw1,DWORD dw2 );
+#else
+	void tick(){ __sync_fetch_and_add( &ticks_put,1 ); }	//called from the SDL timer thread
 #endif
 
 private:
@@ -22,6 +24,8 @@ private:
 #ifdef _WIN32
 	HANDLE event;
 	MMRESULT timerID;
+#else
+	unsigned timerID;	//SDL_TimerID
 #endif
 	int ticks_put,ticks_get;
 

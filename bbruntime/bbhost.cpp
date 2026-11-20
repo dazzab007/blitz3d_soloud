@@ -14,17 +14,16 @@ bool basic_create();   bool basic_destroy();   void basic_link( void (*)( const 
 bool math_create();    bool math_destroy();    void math_link( void (*)( const char *,void * ) );
 bool string_create();  bool string_destroy();  void string_link( void (*)( const char *,void * ) );
 bool stream_create();  bool stream_destroy();  void stream_link( void (*)( const char *,void * ) );
+bool filesystem_create();  bool filesystem_destroy();  void filesystem_link( void (*)( const char *,void * ) );
+bool input_create();   bool input_destroy();   void input_link( void (*)( const char *,void * ) );
+void bbcmds_link( void (*)( const char *,void * ) );
 bool bank_create();    bool bank_destroy();    void bank_link( void (*)( const char *,void * ) );
 
-//The Windows build defines these in bbsys.cpp/bbruntime.cpp. The console host has
-//no gxRuntime object (gx_runtime stays null: graphics, input and the file system
-//are Prompt 5), and runtime errors are reported by bbhost_run's caller.
+//The Windows build defines these in bbsys.cpp/bbruntime.cpp. gx_runtime is the SDL
+//gxRuntime (gxruntime/sdl), created by bbhost_create; runtime errors are
+//reported by bbhost_run's caller.
 bool debug=false;
 gxRuntime *gx_runtime=0;
-void gxRuntime::debugError( const char *t ){ (void)t; }
-void gxRuntime::debugLog( const char *t ){ if( t ) fprintf( stderr,"%s\n",t ); }
-//CallDLL: needs dlopen/dlsym and the userlib calling convention (later step)
-int gxRuntime::callDll( const std::string &dll,const std::string &func,const void *in,int in_sz,void *out,int out_sz ){ return 0; }
 
 //---- console commands (stand in for the graphics Print until Prompt 5) ----
 static void bbConsolePrint( BBStr *s ){
@@ -122,6 +121,9 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
 	string_link( rtSym );
 	stream_link( rtSym );
 	bank_link( rtSym );
+	filesystem_link( rtSym );
+	input_link( rtSym );
+	bbcmds_link( rtSym );
 	rtSym( "Print$string=\"\"",RTSYM_CAST( bbConsolePrint ) );
 	rtSym( "Write$string",RTSYM_CAST( bbConsoleWrite ) );
 	rtSym( "$Input$prompt=\"\"",RTSYM_CAST( bbConsoleInput ) );
@@ -136,11 +138,15 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
 bool bbhost_create( bool dbg,const char **err ){
 	debug=dbg;
 	const char *e=0;
-	if( !basic_create() ) e="basic_create failed";
+	gx_runtime=gxRuntime::openRuntime();
+	if( !gx_runtime ) e="Unable to start SDL";
+	else if( !basic_create() ) e="basic_create failed";
 	else if( !math_create() ) e="math_create failed";
 	else if( !string_create() ) e="string_create failed";
 	else if( !stream_create() ) e="stream_create failed";
 	else if( !bank_create() ) e="bank_create failed";
+	else if( !filesystem_create() ) e="filesystem_create failed";
+	else if( !input_create() ) e="input_create failed";
 	if( e ){
 		if( err ) *err=e;
 		return false;
@@ -149,6 +155,8 @@ bool bbhost_create( bool dbg,const char **err ){
 }
 
 void bbhost_destroy(){
+	input_destroy();
+	filesystem_destroy();
 	for( size_t k=0;k<s_libs.size();++k ) dlclose( s_libs[k] );
 	s_libs.clear();
 	bank_destroy();
@@ -156,6 +164,8 @@ void bbhost_destroy(){
 	string_destroy();
 	math_destroy();
 	basic_destroy();
+	gxRuntime::closeRuntime( gx_runtime );
+	gx_runtime=0;
 }
 
 //---- faults become runtime errors ----
@@ -205,7 +215,7 @@ const char *bbhost_run( void (*entry)() ){
 	if( !setjmp( jb ) ){
 		entry();
 	}else{
-		result=bb_err_msg ? bb_err_msg : "Unknown runtime error";
+		result=bb_err_msg;	//null (End, window closed) is a normal end of the program
 	}
 	bb_err_jmp=prev;
 

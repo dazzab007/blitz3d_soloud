@@ -19,12 +19,13 @@
 
 #include "../debugger/debugger.h"
 #else
-// Forward declarations for non-Windows builds (no Windows headers needed).
+// Non-Windows builds: no Windows headers. Input, file system and timer have
+// portable headers; graphics/audio stay forward declared until their SDL ports.
+#include "gxinput.h"
+#include "gxfilesystem.h"
+#include "gxtimer.h"
 class gxAudio;
-class gxInput;
 class gxGraphics;
-class gxFileSystem;
-class gxTimer;
 class gxScene;
 class gxMesh;
 class gxTexture;
