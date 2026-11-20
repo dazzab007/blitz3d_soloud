@@ -33,7 +33,7 @@ static void collect( const char *sym,void *pc ){
 }
 
 static void showUsage(){
-	cout<<"Usage: blitzcc [-h|-q|+q|-c|-d|-k|+k|-v] sourcefile.bb [args]"<<endl;
+	cout<<"Usage: blitzcc [-h|-q|+q|-c|-d|-t|-k|+k|-v|-o exefile] sourcefile.bb [args]"<<endl;
 }
 
 static void showHelp(){
@@ -43,6 +43,7 @@ static void showHelp(){
 	cout<<"+q         : very quiet mode"<<endl;
 	cout<<"-c         : compile only"<<endl;
 	cout<<"-d         : debug compile"<<endl;
+	cout<<"-t         : text mode (no window; Print writes to the terminal)"<<endl;
 	cout<<"-k         : dump keywords"<<endl;
 	cout<<"+k         : dump keywords and syntax"<<endl;
 	cout<<"-v         : version info"<<endl;
@@ -99,7 +100,7 @@ int main( int argc,char *argv[] ){
 
 	string in_file,out_file,args;
 	bool debug=false,quiet=false,veryquiet=false,compileonly=false;
-	bool dumpkeys=false,dumphelp=false,showhelp=false,versinfo=false;
+	bool dumpkeys=false,dumphelp=false,showhelp=false,versinfo=false,console=false;
 
 	for( int k=1;k<argc;++k ){
 		string t=tolower( string( argv[k] ) );
@@ -108,6 +109,7 @@ int main( int argc,char *argv[] ){
 		else if( t=="+q" ) quiet=veryquiet=true;
 		else if( t=="-c" ) compileonly=true;
 		else if( t=="-d" ) debug=true;
+		else if( t=="-t" ) console=true;
 		else if( t=="-k" ) dumpkeys=true;
 		else if( t=="+k" ) dumpkeys=dumphelp=true;
 		else if( t=="-v" ) versinfo=true;
@@ -130,7 +132,7 @@ int main( int argc,char *argv[] ){
 
 	//declare the runtime to the front end and collect the symbol addresses
 	runtimeEnviron=d_new Environ( "",Type::int_type,0,0 );
-	bbhost_link( collect );
+	bbhost_link( collect,console );
 
 	//userlibs: $blitzpath/userlibs, else <directory of blitzcc>/userlibs
 	string selfDir;
@@ -194,7 +196,7 @@ int main( int argc,char *argv[] ){
 		string launcher=selfDir+"/blitzrun";
 		if( !veryquiet ) cout<<"Creating executable \""<<out_file<<"\"..."<<endl;
 		string why;
-		if( !x64WriteExe( launcher,out_file,module,debug ? X64EXE_DEBUG : 0,why ) ){
+		if( !x64WriteExe( launcher,out_file,module,(debug ? X64EXE_DEBUG : 0)|(console ? X64EXE_CONSOLE : 0),why ) ){
 			err( "Error creating executable: "+why );
 		}
 		return 0;
@@ -207,7 +209,7 @@ int main( int argc,char *argv[] ){
 	if( !entry ) err( "Program has no entry point" );
 
 	const char *e=0;
-	if( !bbhost_create( debug,&e ) ) err( string( "Startup Error: " )+e );
+	if( !bbhost_create( debug,console,&e ) ) err( string( "Startup Error: " )+e );
 	if( !veryquiet ) cout<<"Executing..."<<endl;
 	cout.flush();
 

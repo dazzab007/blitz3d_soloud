@@ -200,7 +200,7 @@ static void test_display( gxRuntime *rt ){
 	}
 	rt->windowedModeInfo( &caps );
 	CHECK( caps&gxRuntime::GFXMODECAPS_3D );
-	CHECK( rt->openGraphics( 640,480,32,0,0 )==0 );	//graphics arrive with the next step
+	CHECK( rt->openGraphics( 0,480,32,0,0 )==0 );		//a zero-sized screen is refused
 }
 
 static void test_misc( gxRuntime *rt ){

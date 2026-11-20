@@ -104,6 +104,7 @@
 
 - x64 commits 4/4b/5/6 (asmjit, harness relocs, integer tiles, calls) — written and tested in the claude.ai session, applied as patches:
   - test_codegen_x64 (10), test_tiles_x64 (167), test_calls_x64 (50).
+- Prompt 5 step 2: 2D graphics (software ARGB canvases, SDL window + GL presenter, stb fonts/images, graphics/text host modes); test_gxgraphics_sdl 2333 checks, 7 gfx_* blitzcc programs (48 blitzcc checks), all other suites unchanged and passing.
 - Prompt 5 step 1: SDL2 gxRuntime (events, time, timers, input, POSIX file system, mode enumeration); host opens it; 100 unit checks + 41 blitzcc checks; all other suites unchanged and passing.
 - Prompt 4 step 5: userlibs (.decls parser in rtlink, dlopen loader in bbhost, '*' params incl. bank handles via __bbBankData, search paths). 31 blitzcc checks. All other suites unchanged and passing.
 - Prompt 4 step 4: blitzcc -o (launcher blitzrun + appended checksummed module), 23 blitzcc checks (in-process, executable, malformed executables), rtlinkName vs rtlinkDeclare check in test_realrt_x64. All other suites unchanged and passing.
@@ -116,7 +117,7 @@
   - Commit 6 front end: IR_CALL/IR_FCALL sconst = call class ("" Blitz, "C"+i/f per arg C call); FuncType::blitzFunc; Node::floatArgs. Reference dumps regenerated; new tests/x64/calltest.bb/.dump.
 
 ## Next
-- Prompt 5 step 2: 2D graphics: window + GL context on SDL, gxGraphics/gxCanvas (CPU shadow buffer uploaded as a GL texture at Flip), gxFont via stb_truetype, so Graphics/Cls/Plot/Line/Rect/Oval/Text/Print/Flip/LoadImage/DrawImage work; then step 3: 3D (gxScene/gxMesh/gxTexture + shaders, loader_x without minidx9).
+- Prompt 5 step 3: 3D. gxScene (D3D7 state in gxscene.cpp is the spec), gxMesh (VBO/IBO), textures from gxCanvas, a fixed-function-emulating GL shader (8 lights, fog, 8 texture stages, blend modes and FX flags), link bbblitz3d.cpp + the blitz3d library into the host, replace blitz3d_open/close stubs; loader_x without minidx9. Also: audio (gxaudio over SoLoud), SDL_ttf-free text input details, fullscreen mode switching.
 
 ## Blockers
 - None

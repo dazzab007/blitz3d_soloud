@@ -16,6 +16,7 @@ bool string_create();  bool string_destroy();  void string_link( void (*)( const
 bool stream_create();  bool stream_destroy();  void stream_link( void (*)( const char *,void * ) );
 bool filesystem_create();  bool filesystem_destroy();  void filesystem_link( void (*)( const char *,void * ) );
 bool input_create();   bool input_destroy();   void input_link( void (*)( const char *,void * ) );
+bool graphics_create();  bool graphics_destroy();  void graphics_link( void (*)( const char *,void * ) );
 void bbcmds_link( void (*)( const char *,void * ) );
 bool bank_create();    bool bank_destroy();    void bank_link( void (*)( const char *,void * ) );
 
@@ -24,6 +25,10 @@ bool bank_create();    bool bank_destroy();    void bank_link( void (*)( const c
 //reported by bbhost_run's caller.
 bool debug=false;
 gxRuntime *gx_runtime=0;
+
+//The 3D module (bbblitz3d.cpp) is not linked yet: Graphics3D opens a 2D screen only.
+void blitz3d_open(){}
+void blitz3d_close(){}
 
 //---- console commands (stand in for the graphics Print until Prompt 5) ----
 static void bbConsolePrint( BBStr *s ){
@@ -115,7 +120,7 @@ static void bbDebugEnter( void *frame,int env_id,const char *func ){}
 static void bbDebugLeave(){}
 static void bbDebugStmt( int pos,const char *file ){}
 
-void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
+void bbhost_link( void (*rtSym)( const char *sym,void *pc ),bool console ){
 	basic_link( rtSym );
 	math_link( rtSym );
 	string_link( rtSym );
@@ -124,9 +129,13 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
 	filesystem_link( rtSym );
 	input_link( rtSym );
 	bbcmds_link( rtSym );
-	rtSym( "Print$string=\"\"",RTSYM_CAST( bbConsolePrint ) );
-	rtSym( "Write$string",RTSYM_CAST( bbConsoleWrite ) );
-	rtSym( "$Input$prompt=\"\"",RTSYM_CAST( bbConsoleInput ) );
+	if( console ){
+		rtSym( "Print$string=\"\"",RTSYM_CAST( bbConsolePrint ) );
+		rtSym( "Write$string",RTSYM_CAST( bbConsoleWrite ) );
+		rtSym( "$Input$prompt=\"\"",RTSYM_CAST( bbConsoleInput ) );
+	}else{
+		graphics_link( rtSym );
+	}
 	rtSym( "_bbLoadLibs",RTSYM_CAST( bbLoadLibs ) );
 	rtSym( "_bbStrToCStr",RTSYM_CAST( bbStrToCStr ) );
 	rtSym( "_bbCStrToStr",RTSYM_CAST( bbCStrToStr ) );
@@ -135,7 +144,10 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
 	rtSym( "_bbDebugStmt",RTSYM_CAST( bbDebugStmt ) );
 }
 
-bool bbhost_create( bool dbg,const char **err ){
+static bool s_console=true;
+
+bool bbhost_create( bool dbg,bool console,const char **err ){
+	s_console=console;
 	debug=dbg;
 	const char *e=0;
 	gx_runtime=gxRuntime::openRuntime();
@@ -146,6 +158,7 @@ bool bbhost_create( bool dbg,const char **err ){
 	else if( !stream_create() ) e="stream_create failed";
 	else if( !bank_create() ) e="bank_create failed";
 	else if( !filesystem_create() ) e="filesystem_create failed";
+	else if( !console && !graphics_create() ) e="Unable to open the graphics window";
 	else if( !input_create() ) e="input_create failed";
 	if( e ){
 		if( err ) *err=e;
@@ -156,6 +169,7 @@ bool bbhost_create( bool dbg,const char **err ){
 
 void bbhost_destroy(){
 	input_destroy();
+	if( !s_console ) graphics_destroy();
 	filesystem_destroy();
 	for( size_t k=0;k<s_libs.size();++k ) dlclose( s_libs[k] );
 	s_libs.clear();

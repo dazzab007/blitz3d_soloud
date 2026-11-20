@@ -129,14 +129,19 @@ if (BB_PORTABLE_BUILD)
 	add_library(gxruntime_sdl
 		../gxruntime/sdl/gxruntime_sdl.cpp ../gxruntime/sdl/gxruntime_sdl.h
 		../gxruntime/sdl/gxinput_sdl.cpp ../gxruntime/sdl/gxtimer_sdl.cpp
-		../gxruntime/sdl/gxfilesystem_posix.cpp ../gxruntime/gxdevice.cpp)
+		../gxruntime/sdl/gxfilesystem_posix.cpp ../gxruntime/gxdevice.cpp ../gxruntime/gxfont.cpp
+		../gxruntime/sdl/gxcanvas_sdl.cpp ../gxruntime/sdl/gxgraphics_sdl.cpp ../gxruntime/sdl/gxmovie_sdl.cpp ../gxruntime/sdl/gxsurface_sdl.h)
 	bb_target_options(gxruntime_sdl)
 	if (TARGET SDL2::SDL2)
-		target_link_libraries(gxruntime_sdl PUBLIC SDL2::SDL2)
+		target_link_libraries(gxruntime_sdl PUBLIC SDL2::SDL2 "-framework OpenGL")
 	else ()
 		target_include_directories(gxruntime_sdl PUBLIC ${SDL2_INCLUDE_DIRS})
-		target_link_libraries(gxruntime_sdl PUBLIC ${SDL2_LIBRARIES})
+		target_link_libraries(gxruntime_sdl PUBLIC ${SDL2_LIBRARIES} "-framework OpenGL")
 	endif ()
+
+	add_executable(test_gxgraphics_sdl ../tests/gx/test_gxgraphics_sdl.cpp)
+	bb_target_options(test_gxgraphics_sdl)
+	target_link_libraries(test_gxgraphics_sdl gxruntime_sdl)
 
 	add_executable(test_gxruntime_sdl ../tests/gx/test_gxruntime_sdl.cpp)
 	bb_target_options(test_gxruntime_sdl)

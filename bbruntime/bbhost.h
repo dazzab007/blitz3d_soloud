@@ -13,10 +13,13 @@
 //Register every symbol the host provides: the portable runtime modules
 //(basic, math, string, stream, bank) plus the console commands and the
 //internal hooks (__bbLoadLibs, __bbDebug*). Same rtSym contract as *_link.
-void bbhost_link( void (*rtSym)( const char *sym,void *pc ) );
+//console=true is text mode: no graphics module, Print/Write/Input use stdout/stdin.
+//Otherwise the graphics module (Graphics, Cls, Print on the window, ...) is linked
+//and a default 400x300 window opens when the program starts, as in Blitz3D.
+void bbhost_link( void (*rtSym)( const char *sym,void *pc ),bool console );
 
 //Create the runtime modules. False (with a message in *err) on failure.
-bool bbhost_create( bool debug,const char **err );
+bool bbhost_create( bool debug,bool console,const char **err );
 
 //Run entry() under the error handlers. Returns 0 when the program ended
 //normally, else the runtime error message (valid until the next call).

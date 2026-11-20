@@ -45,6 +45,11 @@ public:
 
 	~PixelFormat();
 
+#ifndef _WIN32
+	//macOS: every surface is 32-bit ARGB (gxruntime/sdl/gxcanvas_sdl.cpp)
+	void setARGB32();
+#endif
+
 #ifdef _WIN32
 	void setFormat( const DDPIXELFORMAT &pf );
 #endif

@@ -13,7 +13,7 @@
 #include "x64module.h"
 #include <string>
 
-enum{ X64EXE_DEBUG=1 };
+enum{ X64EXE_DEBUG=1,X64EXE_CONSOLE=2 };	//console = text mode (blitzcc -t): no window, Print goes to stdout
 
 //Copy launcher to outFile, append the module, mark it executable.
 bool x64WriteExe( const std::string &launcher,const std::string &outFile,

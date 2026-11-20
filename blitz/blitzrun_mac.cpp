@@ -20,7 +20,8 @@ int main( int argc,char *argv[] ){
 		return 2;
 	}
 
-	bbhost_link( collect );
+	bool console=(flags & X64EXE_CONSOLE)!=0;
+	bbhost_link( collect,console );
 	{
 		//userlib dylibs: $blitzpath/userlibs, then <directory of this executable>/userlibs
 		std::string self=x64SelfPath();
@@ -42,7 +43,7 @@ int main( int argc,char *argv[] ){
 	}
 
 	const char *e=0;
-	if( !bbhost_create( (flags&X64EXE_DEBUG)!=0,&e ) ){
+	if( !bbhost_create( (flags&X64EXE_DEBUG)!=0,console,&e ) ){
 		fprintf( stderr,"Startup Error: %s\n",e );
 		return 2;
 	}
