@@ -14,6 +14,7 @@
 #include "../compiler/codegen_x64/codegen_x64.h"
 #include "../linker/x64module.h"
 #include "../linker/x64export.h"
+#include "../linker/x64exe.h"
 #include "../bbruntime/bbhost.h"
 
 #include <unistd.h>
@@ -44,7 +45,7 @@ static void showHelp(){
 	cout<<"-k         : dump keywords"<<endl;
 	cout<<"+k         : dump keywords and syntax"<<endl;
 	cout<<"-v         : version info"<<endl;
-	cout<<"-o exefile : generate executable (not available yet on macOS)"<<endl;
+	cout<<"-o exefile : generate a stand-alone executable"<<endl;
 }
 
 static void err( const string &t ){
@@ -135,8 +136,6 @@ int main( int argc,char *argv[] ){
 	if( versinfo ) cout<<VERSION_TEXT<<endl;
 	if( !in_file.size() ) return 0;
 
-	if( out_file.size() ) err( "Creating executables (-o) is not available on macOS yet" );
-
 	ifstream in( in_file.c_str() );
 	if( !in ) err( "Unable to open input file" );
 	if( !quiet ){
@@ -178,6 +177,18 @@ int main( int argc,char *argv[] ){
 	if( !veryquiet ) cout<<"Linking..."<<endl;
 	X64Module module;
 	if( !x64Export( holder,codegen,module ) ) err( "Code generation failed" );
+	if( out_file.size() ){
+		//the launcher (blitzrun) lives next to blitzcc; the program is appended to a copy of it
+		string self=x64SelfPath();
+		size_t slash=self.rfind( '/' );
+		string launcher=(slash==string::npos ? string( "." ) : self.substr( 0,slash ))+"/blitzrun";
+		if( !veryquiet ) cout<<"Creating executable \""<<out_file<<"\"..."<<endl;
+		string why;
+		if( !x64WriteExe( launcher,out_file,module,debug ? X64EXE_DEBUG : 0,why ) ){
+			err( "Error creating executable: "+why );
+		}
+		return 0;
+	}
 	if( compileonly ) return 0;
 
 	X64Loader loader;

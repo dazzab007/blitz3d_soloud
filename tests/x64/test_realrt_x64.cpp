@@ -13,6 +13,7 @@
 #include "../../compiler/parser.h"
 #include "../../compiler/prognode.h"
 #include "../../compiler/rtlink.h"
+#include "../../compiler/rtlinkname.h"
 #include "../../bbruntime/bbsys.h"
 #include "x64test.h"
 
@@ -53,10 +54,18 @@ static Environ *makeRuntimeEnviron( std::map<std::string,void*> &stubs ){
 	g_syms.push_back( std::make_pair( std::string( "_bbDebugEnter" ),(void*)&t_DebugEnter ) );
 	g_syms.push_back( std::make_pair( std::string( "_bbDebugLeave" ),(void*)&t_DebugLeave ) );
 	g_syms.push_back( std::make_pair( std::string( "_bbDebugStmt" ),(void*)&t_DebugStmt ) );
+	static bool nameChecked=false;
 	for( size_t k=0;k<g_syms.size();++k ){
 		string link=rtlinkDeclare( g_syms[k].first,e );
+		//the launcher builds its table with rtlinkName: it must agree with rtlinkDeclare
+		if( !nameChecked ) ++tests_run;
+		if( !nameChecked && link!=rtlinkName( g_syms[k].first ) ){
+			++tests_failed;
+			printf( "FAIL rtlinkName(%s)=%s, rtlinkDeclare=%s\n",g_syms[k].first.c_str(),rtlinkName( g_syms[k].first ).c_str(),link.c_str() );
+		}
 		stubs[link]=g_syms[k].second;
 	}
+	nameChecked=true;
 	return e;
 }
 

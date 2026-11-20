@@ -65,6 +65,15 @@ public:
 	//Relocations recorded so far (applied by X64Loader).
 	const std::vector<Reloc> &relocs()const{ return m_relocs; }
 
+	//Symbols (name -> offset), for serialization.
+	const std::map<std::string,int> &symbols()const{ return m_symbols; }
+
+	//Flat byte image of the module (code, text size, symbols, relocations)
+	//for stand-alone executables, and its inverse. deserialize() returns false
+	//(leaving mod empty) on a truncated or malformed image.
+	std::string serialize()const;
+	static bool deserialize( const void *data,size_t size,X64Module &mod );
+
 	//Access the raw code buffer.
 	const uint8_t *code()const{ return m_code.data(); }
 	int size()const{ return (int)m_code.size(); }

@@ -158,3 +158,85 @@ void X64Loader::free(){
 		m_size=0;
 	}
 }
+
+//---- serialization (stand-alone executables) ----
+//All integers little-endian 32-bit. Layout:
+//  u32 textSize (-1 = none), u32 codeSize, code bytes,
+//  u32 nsyms,   { u32 nameLen, name, i32 offset }...
+//  u32 nrelocs, { i32 offset, u32 kind, u32 nameLen, name }...
+static void put32( std::string &o,uint32_t v ){ o.append( (const char*)&v,4 ); }
+static void putStr( std::string &o,const std::string &s ){ put32( o,(uint32_t)s.size() );o+=s; }
+
+std::string X64Module::serialize()const{
+	std::string o;
+	put32( o,(uint32_t)m_textSize );
+	put32( o,(uint32_t)m_code.size() );
+	if( m_code.size() ) o.append( (const char*)&m_code[0],m_code.size() );
+	put32( o,(uint32_t)m_symbols.size() );
+	for( std::map<std::string,int>::const_iterator it=m_symbols.begin();it!=m_symbols.end();++it ){
+		putStr( o,it->first );
+		put32( o,(uint32_t)it->second );
+	}
+	put32( o,(uint32_t)m_relocs.size() );
+	for( size_t k=0;k<m_relocs.size();++k ){
+		put32( o,(uint32_t)m_relocs[k].offset );
+		put32( o,(uint32_t)m_relocs[k].kind );
+		putStr( o,m_relocs[k].sym );
+	}
+	return o;
+}
+
+namespace{
+struct Reader{
+	const uint8_t *p;size_t left;bool ok;
+	Reader( const void *d,size_t n ):p((const uint8_t*)d),left(n),ok(true){}
+	uint32_t u32(){
+		uint32_t v=0;
+		if( left<4 ){ ok=false;return 0; }
+		memcpy( &v,p,4 );p+=4;left-=4;return v;
+	}
+	bool bytes( std::string &s,uint32_t n ){
+		if( left<n ){ ok=false;return false; }
+		s.assign( (const char*)p,n );p+=n;left-=n;return true;
+	}
+	std::string str(){
+		std::string s;
+		uint32_t n=u32();
+		if( ok && n<=left ) bytes( s,n ); else ok=false;
+		return s;
+	}
+};
+}
+
+bool X64Module::deserialize( const void *data,size_t size,X64Module &mod ){
+	Reader r( data,size );
+	mod.m_code.clear();mod.m_symbols.clear();mod.m_relocs.clear();mod.m_textSize=-1;
+	int textSize=(int)r.u32();
+	uint32_t codeSize=r.u32();
+	std::string code;
+	if( !r.ok || !r.bytes( code,codeSize ) ){ return false; }
+	uint32_t nsyms=r.u32();
+	std::map<std::string,int> syms;
+	for( uint32_t k=0;r.ok && k<nsyms;++k ){
+		std::string name=r.str();
+		int off=(int)r.u32();
+		if( r.ok ) syms[name]=off;
+	}
+	uint32_t nrel=r.u32();
+	std::vector<Reloc> rels;
+	for( uint32_t k=0;r.ok && k<nrel;++k ){
+		Reloc rl;
+		rl.offset=(int)r.u32();
+		uint32_t kind=r.u32();
+		rl.sym=r.str();
+		if( !r.ok || kind>ABS64 || rl.offset<0 || (uint32_t)rl.offset+4>codeSize ) return false;
+		rl.kind=(RelocKind)kind;
+		rels.push_back( rl );
+	}
+	if( !r.ok || r.left!=0 ) return false;
+	mod.m_code.assign( code.begin(),code.end() );
+	mod.m_textSize=textSize;
+	mod.m_symbols=syms;
+	mod.m_relocs=rels;
+	return true;
+}

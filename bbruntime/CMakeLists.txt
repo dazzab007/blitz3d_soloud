@@ -121,7 +121,7 @@ if (BB_PORTABLE_BUILD)
 
 	# x86-64 module + loader (mmap/mprotect, relocations) and the codegen export:
 	# promoted from the test harness (Prompt 4 step 3).
-	add_library(x64link ../linker/x64module.cpp ../linker/x64module.h ../linker/x64export.cpp ../linker/x64export.h)
+	add_library(x64link ../linker/x64module.cpp ../linker/x64module.h ../linker/x64export.cpp ../linker/x64export.h ../linker/x64exe.cpp ../linker/x64exe.h)
 	bb_target_options(x64link)
 	target_link_libraries(x64link codegen_x64)
 
@@ -129,6 +129,11 @@ if (BB_PORTABLE_BUILD)
 	add_executable(blitzcc ../blitz/main_mac.cpp)
 	bb_target_options(blitzcc)
 	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core)
+	# blitzrun: the launcher `blitzcc -o` copies in front of a compiled program.
+	add_executable(blitzrun ../blitz/blitzrun_mac.cpp)
+	bb_target_options(blitzrun)
+	target_link_libraries(blitzrun x64link bbruntime_core)
+	add_dependencies(blitzcc blitzrun)
 	# `cmake --build build --target check_blitzcc`: run tests/blitzcc/*.bb through blitzcc.
 	add_custom_target(check_blitzcc
 		COMMAND ${CMAKE_SOURCE_DIR}/tests/blitzcc/run.sh $<TARGET_FILE:blitzcc>
