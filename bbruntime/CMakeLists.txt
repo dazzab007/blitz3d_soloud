@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(bbruntime)
 
 # Portable bbruntime sources: compile on macOS without Windows headers.
-set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp bberr.cpp)
+set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp bberr.cpp bbhost.cpp)
 
 set(SRCS
 	basic.h
@@ -119,6 +119,21 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_bbaudio)
 	target_link_libraries(test_bbaudio bbruntime_core)
 
+	# x86-64 module + loader (mmap/mprotect, relocations) and the codegen export:
+	# promoted from the test harness (Prompt 4 step 3).
+	add_library(x64link ../linker/x64module.cpp ../linker/x64module.h ../linker/x64export.cpp ../linker/x64export.h)
+	bb_target_options(x64link)
+	target_link_libraries(x64link codegen_x64)
+
+	# blitzcc for macOS: compile a .bb and run it in-process (Prompt 4 step 3).
+	add_executable(blitzcc ../blitz/main_mac.cpp)
+	bb_target_options(blitzcc)
+	target_link_libraries(blitzcc rtlink compiler x64link bbruntime_core)
+	# `cmake --build build --target check_blitzcc`: run tests/blitzcc/*.bb through blitzcc.
+	add_custom_target(check_blitzcc
+		COMMAND ${CMAKE_SOURCE_DIR}/tests/blitzcc/run.sh $<TARGET_FILE:blitzcc>
+		DEPENDS blitzcc VERBATIM)
+
 	# IR dump tool: drives the real compiler front end into DumpCodegen
 	# (tests/x64/), used to verify x64 backend output against the x86-32 one.
 	add_executable(bbdump ../tests/x64/bbdump.cpp ../tests/x64/dump_codegen.cpp)
@@ -126,41 +141,41 @@ if (BB_PORTABLE_BUILD)
 	target_link_libraries(bbdump compiler)
 
 	# x64 backend test: emit mov eax,42; ret through the harness, run it, get 42.
-	add_executable(test_codegen_x64 ../tests/x64/test_codegen_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_codegen_x64 ../tests/x64/test_codegen_x64.cpp)
 	bb_target_options(test_codegen_x64)
-	target_link_libraries(test_codegen_x64 codegen_x64)
+	target_link_libraries(test_codegen_x64 x64link)
 
 	# x64 integer tiles (commit 5): hand-built TNode trees through Codegen_x64.
-	add_executable(test_tiles_x64 ../tests/x64/test_tiles_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_tiles_x64 ../tests/x64/test_tiles_x64.cpp)
 	bb_target_options(test_tiles_x64)
-	target_link_libraries(test_tiles_x64 codegen_x64)
+	target_link_libraries(test_tiles_x64 x64link)
 
 	# x64 calls and frames (commit 6): Blitz and System V calls, alignment, Gosub.
-	add_executable(test_calls_x64 ../tests/x64/test_calls_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_calls_x64 ../tests/x64/test_calls_x64.cpp)
 	bb_target_options(test_calls_x64)
-	target_link_libraries(test_calls_x64 codegen_x64)
+	target_link_libraries(test_calls_x64 x64link)
 
 	# x64 floats (commit 7): SSE tiles, float calls and returns.
-	add_executable(test_floats_x64 ../tests/x64/test_floats_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_floats_x64 ../tests/x64/test_floats_x64.cpp)
 	bb_target_options(test_floats_x64)
-	target_link_libraries(test_floats_x64 codegen_x64)
+	target_link_libraries(test_floats_x64 x64link)
 
 	# x64 data (commit 8): data section, type descriptors, data labels as symbols.
-	add_executable(test_data_x64 ../tests/x64/test_data_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_data_x64 ../tests/x64/test_data_x64.cpp)
 	bb_target_options(test_data_x64)
-	target_link_libraries(test_data_x64 codegen_x64)
+	target_link_libraries(test_data_x64 x64link)
 
 	# x64 front-end integration (commit 9): real .bb source through the real
 	# front end into Codegen_x64, run against the stub runtime in tests/x64/rtstubs.h.
-	add_executable(test_frontend_x64 ../tests/x64/test_frontend_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_frontend_x64 ../tests/x64/test_frontend_x64.cpp)
 	bb_target_options(test_frontend_x64)
-	target_link_libraries(test_frontend_x64 compiler codegen_x64)
+	target_link_libraries(test_frontend_x64 compiler x64link)
 
 	# x64: compiled programs against the real runtime (basic/bbmath/bbstring) through
 	# the portable runtime symbol declaration (compiler/rtlink.cpp). RTEX longjmps.
-	add_executable(test_realrt_x64 ../tests/x64/test_realrt_x64.cpp ../tests/x64/harness.cpp)
+	add_executable(test_realrt_x64 ../tests/x64/test_realrt_x64.cpp)
 	bb_target_options(test_realrt_x64)
-	target_link_libraries(test_realrt_x64 rtlink compiler codegen_x64 bbruntime_core)
+	target_link_libraries(test_realrt_x64 rtlink compiler x64link bbruntime_core)
 
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)

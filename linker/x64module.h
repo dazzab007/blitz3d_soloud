@@ -1,4 +1,5 @@
-//In-memory Module + mini loader for x64 backend tests (commit 4, x64-plan.md).
+//In-memory Module + loader for the x86-64 backend (x64-plan.md section 3; promoted
+//from tests/x64/harness.* in Prompt 4 step 3).
 //The Module collects machine code bytes, symbols and relocations. The loader
 //mmaps RW memory, copies the code, applies REL32/ABS64 relocs against a table
 //of stub function addresses, mprotects RX, and returns a callable pointer.

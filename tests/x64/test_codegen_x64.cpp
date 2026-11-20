@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <cstdint>
-#include "harness.h"
+#include "../../linker/x64module.h"
 #include "../../compiler/codegen_x64/codegen_x64.h"
 
 using namespace asmjit;

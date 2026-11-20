@@ -1,6 +1,6 @@
 //In-memory Module + mini loader implementation (commit 4, x64-plan.md).
 
-#include "harness.h"
+#include "x64module.h"
 #include <sys/mman.h>
 #include <unistd.h>
 #include <cstdio>
@@ -88,7 +88,7 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 	//mmap RW memory.
 	void *mem=mmap( nullptr,mapSize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0 );
 	if( mem==MAP_FAILED ){
-		fprintf( stderr,"harness: mmap failed\n" );
+		fprintf( stderr,"loader: mmap failed\n" );
 		return nullptr;
 	}
 
@@ -106,7 +106,7 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 		}else{
 			std::map<std::string,void*>::const_iterator it=stubTable.find( r.sym );
 			if( it==stubTable.end() ){
-				fprintf( stderr,"harness: unresolved symbol %s\n",r.sym.c_str() );
+				fprintf( stderr,"loader: unresolved symbol %s\n",r.sym.c_str() );
 				munmap( mem,mapSize );
 				return nullptr;
 			}
@@ -117,14 +117,14 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 		}else if( r.kind==REL32 ){
 			int64_t d=(int64_t)target-(int64_t)(uint64_t)(base+r.offset+4);
 			if( d<INT32_MIN || d>INT32_MAX ){
-				fprintf( stderr,"harness: REL32 to %s out of range\n",r.sym.c_str() );
+				fprintf( stderr,"loader: REL32 to %s out of range\n",r.sym.c_str() );
 				munmap( mem,mapSize );
 				return nullptr;
 			}
 			int32_t d32=(int32_t)d;
 			std::memcpy( base+r.offset,&d32,4 );
 		}else{
-			fprintf( stderr,"harness: ABS32 reloc to %s not valid on x86-64\n",r.sym.c_str() );
+			fprintf( stderr,"loader: ABS32 reloc to %s not valid on x86-64\n",r.sym.c_str() );
 			munmap( mem,mapSize );
 			return nullptr;
 		}
@@ -135,7 +135,7 @@ void *X64Loader::load( const X64Module &mod,const std::map<std::string,void*> &s
 	int textBytes=mod.textSize();
 	textBytes=((textBytes+pageSize-1)/pageSize)*pageSize;
 	if( textBytes>0 && mprotect( mem,textBytes,PROT_READ|PROT_EXEC )!=0 ){
-		fprintf( stderr,"harness: mprotect failed\n" );
+		fprintf( stderr,"loader: mprotect failed\n" );
 		munmap( mem,mapSize );
 		return nullptr;
 	}
