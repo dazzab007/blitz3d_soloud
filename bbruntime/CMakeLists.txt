@@ -3,22 +3,19 @@ cmake_minimum_required(VERSION 3.16)
 project(bbruntime)
 
 # Portable bbruntime sources: compile on macOS without Windows headers.
-set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp)
+set(BB_CORE_SRCS bbbank.cpp bbstream.cpp bbfilesystem.cpp bbtimer.cpp bbgraphics.cpp basic.cpp bbmath.cpp bbstring.cpp)
 
 set(SRCS
-	basic.cpp
 	basic.h
 	${BB_CORE_SRCS}
 	bbbank.h
 	bbfilesystem.h
-	bbmath.cpp
 	bbmath.h
 	bbruntime.cpp
 	bbruntime.h
 	bbsockets.cpp
 	bbsockets.h
 	bbstream.h
-	bbstring.cpp
 	bbstring.h
 	bbsys.cpp
 	bbsys.h

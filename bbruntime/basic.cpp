@@ -1,5 +1,6 @@
 
 #include "std.h"
+#include "bb_handle.h"
 #include "bbsys.h"
 #include "../compiler/bb_abi.h"
 #include <cstddef>
@@ -25,6 +26,12 @@ static BBData *dataPtr;
 //chunks of mem - WHAT THE FUCK WAS I ON?!?!?!?
 //static list<char*> memBlks;
 
+#ifdef _WIN32
+#define BB_RT_TYPE static
+#else
+#define BB_RT_TYPE	//non-static: the header declares these extern (clang rejects static after extern)
+#endif
+
 //strings
 static BBStr usedStrs,freeStrs;
 
@@ -35,10 +42,10 @@ static int next_handle;
 static map<int,BBObj*> handle_map;
 static map<BBObj*,int> object_map;
 
-static BBType _bbIntType( BBTYPE_INT );
-static BBType _bbFltType( BBTYPE_FLT );
-static BBType _bbStrType( BBTYPE_STR );
-static BBType _bbCStrType( BBTYPE_CSTR );
+BB_RT_TYPE BBType _bbIntType( BBTYPE_INT );
+BB_RT_TYPE BBType _bbFltType( BBTYPE_FLT );
+BB_RT_TYPE BBType _bbStrType( BBTYPE_STR );
+BB_RT_TYPE BBType _bbCStrType( BBTYPE_CSTR );
 
 //the compiler (compiler/bb_abi.h) assumes these exact struct layouts
 static_assert( offsetof(BBArray,data)==BB_ARRAY_DATA_OFF, "BBArray data offset" );
@@ -173,8 +180,8 @@ BBStr *_bbStrConst( const char *s ){
 }
 
 void * _bbVecAlloc( BBVecType *type ){
-	void *vec=bbMalloc( type->size*4 );
-	memset( vec,0,type->size*4 );
+	void *vec=bbMalloc( type->size*sizeof(BBField) );
+	memset( vec,0,type->size*sizeof(BBField) );
 	return vec;
 }
 
@@ -224,8 +231,8 @@ void _bbDimArray( BBArray *array ){
 		array->scales[k]*=array->scales[k-1];
 	}
 	int size=array->scales[array->dims-1];
-	array->data=bbMalloc( size*4 );
-	memset( array->data,0,size*4 );
+	array->data=bbMalloc( size*sizeof(BBField) );
+	memset( array->data,0,size*sizeof(BBField) );
 }
 
 void _bbArrayBoundsEx(){
@@ -246,7 +253,7 @@ static void insertObj( BBObj *obj,BBObj *next ){
 
 BBObj *_bbObjNew( BBObjType *type ){
 	if( type->free.next==&type->free ){
-		int obj_size=sizeof(BBObj)+type->fieldCnt*4;
+		int obj_size=sizeof(BBObj)+type->fieldCnt*sizeof(BBField);
 		BBObj *o=(BBObj*)bbMalloc( obj_size*OBJ_NEW_INC );
 		for( int k=0;k<OBJ_NEW_INC;++k ){
 			insertObj( o,&type->free );
@@ -551,52 +558,52 @@ void basic_link( void (*rtSym)( const char *sym,void *pc ) ){
 	rtSym( "_bbStrType",&_bbStrType );
 	rtSym( "_bbCStrType",&_bbCStrType );
 
-	rtSym( "_bbStrLoad",_bbStrLoad );
-	rtSym( "_bbStrRelease",_bbStrRelease );
-	rtSym( "_bbStrStore",_bbStrStore );
-	rtSym( "_bbStrCompare",_bbStrCompare );
-	rtSym( "_bbStrConcat",_bbStrConcat );
-	rtSym( "_bbStrToInt",_bbStrToInt );
-	rtSym( "_bbStrFromInt",_bbStrFromInt );
-	rtSym( "_bbStrToFloat",_bbStrToFloat );
-	rtSym( "_bbStrFromFloat",_bbStrFromFloat );
-	rtSym( "_bbStrConst",_bbStrConst );
-	rtSym( "_bbDimArray",_bbDimArray );
-	rtSym( "_bbUndimArray",_bbUndimArray );
-	rtSym( "_bbArrayBoundsEx",_bbArrayBoundsEx );
-	rtSym( "_bbVecAlloc",_bbVecAlloc );
-	rtSym( "_bbVecFree",_bbVecFree );
-	rtSym( "_bbVecBoundsEx",_bbVecBoundsEx );
-	rtSym( "_bbObjNew",_bbObjNew );
-	rtSym( "_bbObjDelete",_bbObjDelete );
-	rtSym( "_bbObjDeleteEach",_bbObjDeleteEach );
-	rtSym( "_bbObjRelease",_bbObjRelease );
-	rtSym( "_bbObjStore",_bbObjStore );
-	rtSym( "_bbObjCompare",_bbObjCompare );
-	rtSym( "_bbObjNext",_bbObjNext );
-	rtSym( "_bbObjPrev",_bbObjPrev );
-	rtSym( "_bbObjFirst",_bbObjFirst );
-	rtSym( "_bbObjLast",_bbObjLast );
-	rtSym( "_bbObjInsBefore",_bbObjInsBefore );
-	rtSym( "_bbObjInsAfter",_bbObjInsAfter );
-	rtSym( "_bbObjEachFirst",_bbObjEachFirst );
-	rtSym( "_bbObjEachNext",_bbObjEachNext );
-	rtSym( "_bbObjEachFirst2",_bbObjEachFirst2 );
-	rtSym( "_bbObjEachNext2",_bbObjEachNext2 );
-	rtSym( "_bbObjToStr",_bbObjToStr );
-	rtSym( "_bbObjToHandle",_bbObjToHandle );
-	rtSym( "_bbObjFromHandle",_bbObjFromHandle );
-	rtSym( "_bbNullObjEx",_bbNullObjEx );
-	rtSym( "_bbRestore",_bbRestore );
-	rtSym( "_bbReadInt",_bbReadInt );
-	rtSym( "_bbReadFloat",_bbReadFloat );
-	rtSym( "_bbReadStr",_bbReadStr );
-	rtSym( "_bbAbs",_bbAbs );
-	rtSym( "_bbSgn",_bbSgn );
-	rtSym( "_bbMod",_bbMod );
-	rtSym( "_bbFAbs",_bbFAbs );
-	rtSym( "_bbFSgn",_bbFSgn );
-	rtSym( "_bbFMod",_bbFMod );
-	rtSym( "_bbFPow",_bbFPow );
-	rtSym( "RuntimeStats",bbRuntimeStats );
+	rtSym( "_bbStrLoad",RTSYM_CAST( _bbStrLoad ) );
+	rtSym( "_bbStrRelease",RTSYM_CAST( _bbStrRelease ) );
+	rtSym( "_bbStrStore",RTSYM_CAST( _bbStrStore ) );
+	rtSym( "_bbStrCompare",RTSYM_CAST( _bbStrCompare ) );
+	rtSym( "_bbStrConcat",RTSYM_CAST( _bbStrConcat ) );
+	rtSym( "_bbStrToInt",RTSYM_CAST( _bbStrToInt ) );
+	rtSym( "_bbStrFromInt",RTSYM_CAST( _bbStrFromInt ) );
+	rtSym( "_bbStrToFloat",RTSYM_CAST( _bbStrToFloat ) );
+	rtSym( "_bbStrFromFloat",RTSYM_CAST( _bbStrFromFloat ) );
+	rtSym( "_bbStrConst",RTSYM_CAST( _bbStrConst ) );
+	rtSym( "_bbDimArray",RTSYM_CAST( _bbDimArray ) );
+	rtSym( "_bbUndimArray",RTSYM_CAST( _bbUndimArray ) );
+	rtSym( "_bbArrayBoundsEx",RTSYM_CAST( _bbArrayBoundsEx ) );
+	rtSym( "_bbVecAlloc",RTSYM_CAST( _bbVecAlloc ) );
+	rtSym( "_bbVecFree",RTSYM_CAST( _bbVecFree ) );
+	rtSym( "_bbVecBoundsEx",RTSYM_CAST( _bbVecBoundsEx ) );
+	rtSym( "_bbObjNew",RTSYM_CAST( _bbObjNew ) );
+	rtSym( "_bbObjDelete",RTSYM_CAST( _bbObjDelete ) );
+	rtSym( "_bbObjDeleteEach",RTSYM_CAST( _bbObjDeleteEach ) );
+	rtSym( "_bbObjRelease",RTSYM_CAST( _bbObjRelease ) );
+	rtSym( "_bbObjStore",RTSYM_CAST( _bbObjStore ) );
+	rtSym( "_bbObjCompare",RTSYM_CAST( _bbObjCompare ) );
+	rtSym( "_bbObjNext",RTSYM_CAST( _bbObjNext ) );
+	rtSym( "_bbObjPrev",RTSYM_CAST( _bbObjPrev ) );
+	rtSym( "_bbObjFirst",RTSYM_CAST( _bbObjFirst ) );
+	rtSym( "_bbObjLast",RTSYM_CAST( _bbObjLast ) );
+	rtSym( "_bbObjInsBefore",RTSYM_CAST( _bbObjInsBefore ) );
+	rtSym( "_bbObjInsAfter",RTSYM_CAST( _bbObjInsAfter ) );
+	rtSym( "_bbObjEachFirst",RTSYM_CAST( _bbObjEachFirst ) );
+	rtSym( "_bbObjEachNext",RTSYM_CAST( _bbObjEachNext ) );
+	rtSym( "_bbObjEachFirst2",RTSYM_CAST( _bbObjEachFirst2 ) );
+	rtSym( "_bbObjEachNext2",RTSYM_CAST( _bbObjEachNext2 ) );
+	rtSym( "_bbObjToStr",RTSYM_CAST( _bbObjToStr ) );
+	rtSym( "_bbObjToHandle",RTSYM_CAST( _bbObjToHandle ) );
+	rtSym( "_bbObjFromHandle",RTSYM_CAST( _bbObjFromHandle ) );
+	rtSym( "_bbNullObjEx",RTSYM_CAST( _bbNullObjEx ) );
+	rtSym( "_bbRestore",RTSYM_CAST( _bbRestore ) );
+	rtSym( "_bbReadInt",RTSYM_CAST( _bbReadInt ) );
+	rtSym( "_bbReadFloat",RTSYM_CAST( _bbReadFloat ) );
+	rtSym( "_bbReadStr",RTSYM_CAST( _bbReadStr ) );
+	rtSym( "_bbAbs",RTSYM_CAST( _bbAbs ) );
+	rtSym( "_bbSgn",RTSYM_CAST( _bbSgn ) );
+	rtSym( "_bbMod",RTSYM_CAST( _bbMod ) );
+	rtSym( "_bbFAbs",RTSYM_CAST( _bbFAbs ) );
+	rtSym( "_bbFSgn",RTSYM_CAST( _bbFSgn ) );
+	rtSym( "_bbFMod",RTSYM_CAST( _bbFMod ) );
+	rtSym( "_bbFPow",RTSYM_CAST( _bbFPow ) );
+	rtSym( "RuntimeStats",RTSYM_CAST( bbRuntimeStats ) );
 }

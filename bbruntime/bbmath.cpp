@@ -1,5 +1,6 @@
 
 #include "std.h"
+#include "bb_handle.h"
 #include "bbmath.h"
 
 static int rnd_state;
@@ -60,21 +61,21 @@ bool math_destroy(){
 }
 
 void math_link( void (*rtSym)( const char *sym,void *pc ) ){
-	rtSym( "#Sin#degrees",bbSin );
-	rtSym( "#Cos#degrees",bbCos );
-	rtSym( "#Tan#degrees",bbTan );
-	rtSym( "#ASin#float",bbASin );
-	rtSym( "#ACos#float",bbACos );
-	rtSym( "#ATan#float",bbATan );
-	rtSym( "#ATan2#floata#floatb",bbATan2 );
-	rtSym( "#Sqr#float",bbSqr );
-	rtSym( "#Floor#float",bbFloor );
-	rtSym( "#Ceil#float",bbCeil );
-	rtSym( "#Exp#float",bbExp );
-	rtSym( "#Log#float",bbLog );
-	rtSym( "#Log10#float",bbLog10 );
-	rtSym( "#Rnd#from#to=0",bbRnd );
-	rtSym( "%Rand%from%to=1",bbRand );
-	rtSym( "SeedRnd%seed",bbSeedRnd );
-	rtSym( "%RndSeed",bbRndSeed );
+	rtSym( "#Sin#degrees",RTSYM_CAST( bbSin ) );
+	rtSym( "#Cos#degrees",RTSYM_CAST( bbCos ) );
+	rtSym( "#Tan#degrees",RTSYM_CAST( bbTan ) );
+	rtSym( "#ASin#float",RTSYM_CAST( bbASin ) );
+	rtSym( "#ACos#float",RTSYM_CAST( bbACos ) );
+	rtSym( "#ATan#float",RTSYM_CAST( bbATan ) );
+	rtSym( "#ATan2#floata#floatb",RTSYM_CAST( bbATan2 ) );
+	rtSym( "#Sqr#float",RTSYM_CAST( bbSqr ) );
+	rtSym( "#Floor#float",RTSYM_CAST( bbFloor ) );
+	rtSym( "#Ceil#float",RTSYM_CAST( bbCeil ) );
+	rtSym( "#Exp#float",RTSYM_CAST( bbExp ) );
+	rtSym( "#Log#float",RTSYM_CAST( bbLog ) );
+	rtSym( "#Log10#float",RTSYM_CAST( bbLog10 ) );
+	rtSym( "#Rnd#from#to=0",RTSYM_CAST( bbRnd ) );
+	rtSym( "%Rand%from%to=1",RTSYM_CAST( bbRand ) );
+	rtSym( "SeedRnd%seed",RTSYM_CAST( bbSeedRnd ) );
+	rtSym( "%RndSeed",RTSYM_CAST( bbRndSeed ) );
 }

@@ -1,5 +1,6 @@
 
 #include "std.h"
+#include "bb_handle.h"
 #include "bbsys.h"
 #include <time.h>
 
@@ -141,22 +142,22 @@ bool string_destroy(){
 }
 
 void string_link( void(*rtSym)(const char*,void*) ){
-	rtSym( "$String$string%repeat",bbString );
-	rtSym( "$Left$string%count",bbLeft );
-	rtSym( "$Right$string%count",bbRight );
-	rtSym( "$Replace$string$from$to",bbReplace );
-	rtSym( "%Instr$string$find%from=1",bbInstr );
-	rtSym( "$Mid$string%start%count=-1",bbMid );
-	rtSym( "$Upper$string",bbUpper );
-	rtSym( "$Lower$string",bbLower );
-	rtSym( "$Trim$string",bbTrim );
-	rtSym( "$LSet$string%size",bbLSet );
-	rtSym( "$RSet$string%size",bbRSet );
-	rtSym( "$Chr%ascii",bbChr );
-	rtSym( "%Asc$string",bbAsc );
-	rtSym( "%Len$string",bbLen );
-	rtSym( "$Hex%value",bbHex );
-	rtSym( "$Bin%value",bbBin );
-	rtSym( "$CurrentDate",bbCurrentDate );
-	rtSym( "$CurrentTime",bbCurrentTime );
+	rtSym( "$String$string%repeat",RTSYM_CAST( bbString ) );
+	rtSym( "$Left$string%count",RTSYM_CAST( bbLeft ) );
+	rtSym( "$Right$string%count",RTSYM_CAST( bbRight ) );
+	rtSym( "$Replace$string$from$to",RTSYM_CAST( bbReplace ) );
+	rtSym( "%Instr$string$find%from=1",RTSYM_CAST( bbInstr ) );
+	rtSym( "$Mid$string%start%count=-1",RTSYM_CAST( bbMid ) );
+	rtSym( "$Upper$string",RTSYM_CAST( bbUpper ) );
+	rtSym( "$Lower$string",RTSYM_CAST( bbLower ) );
+	rtSym( "$Trim$string",RTSYM_CAST( bbTrim ) );
+	rtSym( "$LSet$string%size",RTSYM_CAST( bbLSet ) );
+	rtSym( "$RSet$string%size",RTSYM_CAST( bbRSet ) );
+	rtSym( "$Chr%ascii",RTSYM_CAST( bbChr ) );
+	rtSym( "%Asc$string",RTSYM_CAST( bbAsc ) );
+	rtSym( "%Len$string",RTSYM_CAST( bbLen ) );
+	rtSym( "$Hex%value",RTSYM_CAST( bbHex ) );
+	rtSym( "$Bin%value",RTSYM_CAST( bbBin ) );
+	rtSym( "$CurrentDate",RTSYM_CAST( bbCurrentDate ) );
+	rtSym( "$CurrentTime",RTSYM_CAST( bbCurrentTime ) );
 }
