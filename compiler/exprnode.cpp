@@ -612,7 +612,9 @@ ExprNode *NullNode::semant( Environ *e ){
 }
 
 TNode *NullNode::translate( Codegen *g ){
-	return d_new TNode( IR_CONST,0,0,0 );
+	TNode *t=d_new TNode( IR_CONST,0,0,0 );
+	t->wide=true;	//x64: Null is a pointer constant (passed as a full 64-bit arg)
+	return t;
 }
 
 /////////////////

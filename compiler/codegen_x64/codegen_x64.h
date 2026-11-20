@@ -90,6 +90,7 @@ private:
 	void pop( const asmjit::x86::Gp &r );
 	void fpush();						//push xmm0 as an 8-byte temporary
 	void fpop( const asmjit::x86::Vec &r );
+	void jcc( asmjit::x86::CondCode cc,const string &target );	//conditional jump to a label or runtime routine
 	void fail();
 
 	void eval( TNode *t );				//result in rax/eax, width isWide(t)

@@ -1,15 +1,15 @@
 func __MAIN frame=16
 CALL 8 "Ci"
   GLOBAL "__bbRestore"
-  MOVE
+  MOVE W
     GLOBAL "__DATA"
-    MEM
+    MEM W
       ARG
 CALL 8 "Ci"
   GLOBAL "__bbLoadLibs"
-  MOVE
+  MOVE W
     GLOBAL "__LIBS"
-    MEM
+    MEM W
       ARG
 JSR "_2_begin"
 JUMP "_2_leave"
@@ -23,9 +23,9 @@ MOVE
     LOCAL -8
 CALL 8 "Ci"
   GLOBAL "__bbUndimArray"
-  MOVE
+  MOVE W
     GLOBAL "_agrid"
-    MEM
+    MEM W
       ARG
 MOVE
   CONST 4
@@ -41,9 +41,9 @@ MOVE
       CONST 20
 CALL 8 "Ci"
   GLOBAL "__bbDimArray"
-  MOVE
+  MOVE W
     GLOBAL "_agrid"
-    MEM
+    MEM W
       ARG
 align 4
 idata "0" label=_agrid
@@ -54,18 +54,18 @@ idata "0"
 CALL 16 "Cii"
   GLOBAL "__bbObjStore"
   SEQ
-    MOVE
+    MOVE W
       LOCAL -4
-      MEM
+      MEM W
         ARG
-    MOVE
+    MOVE W
       CALL 8 "Ci" W
         GLOBAL "__bbObjNew"
-        MOVE
+        MOVE W
           GLOBAL "_tthing"
-          MEM
+          MEM W
             ARG
-      MEM
+      MEM W
         ARG 8
 MOVE
   CONST 5
@@ -79,22 +79,22 @@ sdata "hi" label=_5
 CALL 16 "Cii"
   GLOBAL "__bbStrStore"
   SEQ
-    MOVE
+    MOVE W
       ADD
         MEM W
           MEM W
             LOCAL -4
         CONST 16
-      MEM
+      MEM W
         ARG
-    MOVE
+    MOVE W
       CALL 8 "Ci" W
         GLOBAL "__bbStrConst"
-        MOVE
+        MOVE W
           GLOBAL "_5"
-          MEM
+          MEM W
             ARG
-      MEM
+      MEM W
         ARG 8
 MOVE
   CALL 24
@@ -118,13 +118,13 @@ MOVE
           MOVE W
             CALL 8 "Ci" W
               GLOBAL "__bbStrLoad"
-              MOVE
+              MOVE W
                 ADD
                   MEM W
                     MEM W
                       LOCAL -4
                   CONST 16
-                MEM
+                MEM W
                   ARG
             MEM W
               ARG 16
@@ -214,10 +214,10 @@ cleanup:
   SEQ
     CALL 8 "Ci"
       GLOBAL "__bbObjRelease"
-      MOVE
+      MOVE W
         MEM W
           LOCAL -4
-        MEM
+        MEM W
           ARG
 leave pop=0
 align 4
@@ -259,9 +259,9 @@ RETURN "_4_leave"
         MOVE W
           CALL 8 "Ci" W
             GLOBAL "__bbStrLoad"
-            MOVE
+            MOVE W
               LOCAL 28
-              MEM
+              MEM W
                 ARG
           MEM W
             ARG
@@ -272,10 +272,10 @@ cleanup:
   SEQ
     CALL 8 "Ci"
       GLOBAL "__bbStrRelease"
-      MOVE
+      MOVE W
         MEM W
           LOCAL 28
-        MEM
+        MEM W
           ARG
 leave pop=24
 align 4

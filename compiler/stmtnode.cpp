@@ -9,6 +9,7 @@ static map<string,string> fileMap;
 void StmtNode::debug( int pos,Codegen *g ){
 	if( g->debug ){
 		TNode *t=fileLabel.size() ? global( fileLabel ) : iconst(0);
+		t->wide=true;	//x64: pointer argument (no file label = null)
 		g->code( call( "__bbDebugStmt",iconst( pos ),t ) );
 	}
 }

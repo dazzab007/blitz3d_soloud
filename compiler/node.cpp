@@ -185,13 +185,13 @@ TNode *Node::call( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 	int size=0;
 	TNode *t=0;
 	if( a0 ){
-		t=move( a0,mem( arg(0) ) );
+		t=move( a0,mem( arg(0),isWideNode( a0 ) ) );
 		size+=BB_SLOT;
 		if( a1 ){
-			t=seq( t,move( a1,mem( arg(BB_SLOT) ) ) );
+			t=seq( t,move( a1,mem( arg(BB_SLOT),isWideNode( a1 ) ) ) );
 			size+=BB_SLOT;
 			if( a2 ){
-				t=seq( t,move( a2,mem( arg(2*BB_SLOT) ) ) );
+				t=seq( t,move( a2,mem( arg(2*BB_SLOT),isWideNode( a2 ) ) ) );
 				size+=BB_SLOT;
 			}
 		}
@@ -210,13 +210,13 @@ TNode *Node::fcall( const string &func,TNode *a0,TNode *a1,TNode *a2 ){
 	int size=0;
 	TNode *t=0;
 	if( a0 ){
-		t=move( a0,mem( arg(0) ) );
+		t=move( a0,mem( arg(0),isWideNode( a0 ) ) );
 		size+=BB_SLOT;
 		if( a1 ){
-			t=seq( t,move( a1,mem( arg(BB_SLOT) ) ) );
+			t=seq( t,move( a1,mem( arg(BB_SLOT),isWideNode( a1 ) ) ) );
 			size+=BB_SLOT;
 			if( a2 ){
-				t=seq( t,move( a2,mem( arg(2*BB_SLOT) ) ) );
+				t=seq( t,move( a2,mem( arg(2*BB_SLOT),isWideNode( a2 ) ) ) );
 				size+=BB_SLOT;
 			}
 		}

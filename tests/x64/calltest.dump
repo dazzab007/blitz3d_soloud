@@ -1,15 +1,15 @@
 func __MAIN frame=48
 CALL 8 "Ci"
   GLOBAL "__bbRestore"
-  MOVE
+  MOVE W
     GLOBAL "__DATA"
-    MEM
+    MEM W
       ARG
 CALL 8 "Ci"
   GLOBAL "__bbLoadLibs"
-  MOVE
+  MOVE W
     GLOBAL "__LIBS"
-    MEM
+    MEM W
       ARG
 JSR "_2_begin"
 JUMP "_2_leave"
@@ -51,9 +51,9 @@ MOVE
           MOVE W
             CALL 8 "Ci" W
               GLOBAL "__bbStrConst"
-              MOVE
+              MOVE W
                 GLOBAL "_4"
-                MEM
+                MEM W
                   ARG
             MEM W
               ARG 16
@@ -62,11 +62,11 @@ MOVE
 CALL 16 "Cii"
   GLOBAL "__bbStrStore"
   SEQ
-    MOVE
+    MOVE W
       LOCAL -8
-      MEM
+      MEM W
         ARG
-    MOVE
+    MOVE W
       CALL 8 "Cf" W
         GLOBAL "__bbStrFromFloat"
         MOVE
@@ -74,7 +74,7 @@ CALL 16 "Cii"
             LOCAL -4
           MEM
             ARG
-      MEM
+      MEM W
         ARG 8
 MOVE
   FCALL 8 "Cf"
@@ -137,9 +137,9 @@ CALL 8 "Ci"
           MOVE W
             CALL 8 "Ci" W
               GLOBAL "__bbStrLoad"
-              MOVE
+              MOVE W
                 LOCAL -8
-                MEM
+                MEM W
                   ARG
             MEM W
               ARG
@@ -156,10 +156,10 @@ cleanup:
   SEQ
     CALL 8 "Ci"
       GLOBAL "__bbStrRelease"
-      MOVE
+      MOVE W
         MEM W
           LOCAL -8
-        MEM
+        MEM W
           ARG
 leave pop=0
 func _fmix frame=0
@@ -178,9 +178,9 @@ FRETURN "_3_leave"
           MOVE W
             CALL 8 "Ci" W
               GLOBAL "__bbStrLoad"
-              MOVE
+              MOVE W
                 LOCAL 28
-                MEM
+                MEM W
                   ARG
             MEM W
               ARG
@@ -191,10 +191,10 @@ cleanup:
   SEQ
     CALL 8 "Ci"
       GLOBAL "__bbStrRelease"
-      MOVE
+      MOVE W
         MEM W
           LOCAL 28
-        MEM
+        MEM W
           ARG
 leave pop=24
 align 4

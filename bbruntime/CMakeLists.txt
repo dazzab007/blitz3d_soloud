@@ -153,6 +153,12 @@ if (BB_PORTABLE_BUILD)
 	bb_target_options(test_data_x64)
 	target_link_libraries(test_data_x64 codegen_x64)
 
+	# x64 front-end integration (commit 9): real .bb source through the real
+	# front end into Codegen_x64, run against the stub runtime in tests/x64/rtstubs.h.
+	add_executable(test_frontend_x64 ../tests/x64/test_frontend_x64.cpp ../tests/x64/harness.cpp)
+	bb_target_options(test_frontend_x64)
+	target_link_libraries(test_frontend_x64 compiler codegen_x64)
+
 	# In the portable build, only the handle-table core is available.
 	# The full bbruntime library needs Windows headers (gxruntime, etc.)
 	# which are not yet ported.

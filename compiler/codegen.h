@@ -36,6 +36,30 @@ struct TNode{
 	void log();
 };
 
+//Pointer-width inference for a TNode tree (D4, x64-plan.md section 7). Shared
+//by the front end (to tag helper-call arguments) and codegen_x64. Windows
+//ignores the result (every slot is 4 bytes there).
+inline bool isWideNode( TNode *t ){
+	if( !t ) return false;
+	switch( t->op ){
+	case IR_MEM:case IR_CALL:case IR_MOVE:
+		return t->wide;
+	case IR_LOCAL:case IR_GLOBAL:case IR_ARG:
+		return true;
+	case IR_CONST:		//a pointer constant (Null) is tagged wide by the front end
+		return t->wide;
+	case IR_ADD:case IR_SUB:case IR_MUL:case IR_DIV:
+	case IR_AND:case IR_OR:case IR_XOR:
+		return isWideNode( t->l ) || isWideNode( t->r );
+	case IR_NEG:case IR_SHL:case IR_SHR:case IR_SAR:
+		return isWideNode( t->l );
+	case IR_SEQ:
+		return t->r ? isWideNode( t->r ) : isWideNode( t->l );
+	default:
+		return false;
+	}
+}
+
 class Codegen{
 public:
 	ostream &out;

@@ -104,6 +104,24 @@ void Codegen_x64::pop( const Gp &r ){
 	m_depth-=8;
 }
 
+//Jump targets named __bb* are runtime error routines (__bbNullObjEx,
+//__bbArrayBoundsEx, __bbVecBoundsEx), which may be anywhere in the address
+//space and never return: invert the test around an aligned absolute call, so
+//the routine gets a normal entry stack and a return address for backtraces.
+//Every other target is a label in this module.
+void Codegen_x64::jcc( CondCode cc,const string &target ){
+	if( target.compare( 0,4,"__bb" )!=0 ){
+		m_asm.j( cc,getLabel( target ) );
+		return;
+	}
+	Label skip=m_asm.new_label();
+	m_asm.j( negate_cond( cc ),skip );
+	if( m_depth&15 ) m_asm.sub( rsp,8 );
+	movAbs64( target );
+	m_asm.call( rax );
+	m_asm.bind( skip );
+}
+
 //Float temporaries live on the stack, never at [rbp-N] (that is where the
 //locals are). 8-byte slots keep m_depth/alignment bookkeeping identical to
 //integer temporaries; the float is the low 32 bits.
@@ -172,22 +190,7 @@ static bool getShift( int n,int &shift ){
 ///////////////////////
 
 bool Codegen_x64::isWide( TNode *t ){
-	if( !t ) return false;
-	switch( t->op ){
-	case IR_MEM:case IR_CALL:case IR_MOVE:
-		return t->wide;
-	case IR_LOCAL:case IR_GLOBAL:case IR_ARG:
-		return true;
-	case IR_ADD:case IR_SUB:case IR_MUL:case IR_DIV:
-	case IR_AND:case IR_OR:case IR_XOR:
-		return isWide( t->l ) || isWide( t->r );
-	case IR_NEG:case IR_SHL:case IR_SHR:case IR_SAR:
-		return isWide( t->l );
-	case IR_SEQ:
-		return t->r ? isWide( t->r ) : isWide( t->l );
-	default:
-		return false;
-	}
+	return isWideNode( t );	//shared with the front end (codegen.h)
 }
 
 ////////////////
@@ -227,24 +230,24 @@ void Codegen_x64::evalCompare( TNode *t ){
 
 //JUMPT (negate=false) / JUMPF (negate=true).
 void Codegen_x64::condJump( TNode *t,bool negate ){
-	Label target=getLabel( t->sconst );
+	const string &target=t->sconst;
 	TNode *p=t->l;
 	if( isRelop( p->op ) ){
 		evalCompare( p );
 		CondCode cc=relopCond( p->op );
-		m_asm.j( negate ? negate_cond( cc ) : cc,target );
+		jcc( negate ? negate_cond( cc ) : cc,target );
 		return;
 	}
 	if( isFRelop( p->op ) ){
 		evalFCompare( p );
 		CondCode cc=fcond( p->op );
-		m_asm.j( negate ? negate_cond( cc ) : cc,target );
+		jcc( negate ? negate_cond( cc ) : cc,target );
 		return;
 	}
 	eval( p );
 	if( isWide( p ) ) m_asm.test( rax,rax );
 	else m_asm.test( eax,eax );
-	m_asm.j( negate ? CondCode::kZ : CondCode::kNZ,target );
+	jcc( negate ? CondCode::kZ : CondCode::kNZ,target );
 }
 
 //Float context: the parent decides that the node yields a float. Result in
@@ -336,21 +339,12 @@ void Codegen_x64::stmt( TNode *t ){
 		condJump( t,true );
 		return;
 	case IR_JUMPGE:{
-		//Unsigned l>=r jumps to a runtime error routine (__bbArrayBoundsEx
-		//etc.), which may be anywhere in the address space: invert the test
-		//around an absolute jump.
+		//Unsigned l>=r jumps to a runtime error routine (__bbArrayBoundsEx etc.).
 		bool w=isWide( t->l ) || isWide( t->r );
 		evalBinary( t,w );
 		if( w ) m_asm.cmp( rax,rcx );
 		else m_asm.cmp( eax,ecx );
-		Label skip=m_asm.new_label();
-		m_asm.j( CondCode::kB,skip );
-		//The routine never returns; call it (aligned) so it gets a normal
-		//entry stack and a return address for backtraces.
-		if( m_depth&15 ) m_asm.sub( rsp,8 );
-		movAbs64( t->sconst );
-		m_asm.call( rax );
-		m_asm.bind( skip );
+		jcc( CondCode::kAE,t->sconst );
 		return;
 	}
 	case IR_JSR:
