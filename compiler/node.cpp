@@ -278,6 +278,7 @@ bool Node::isPointerHelper( const string &name ){
 		"__bbStrLoad","__bbStrConcat","__bbStrConst",
 		"__bbStrFromInt","__bbStrFromFloat","__bbStrToCStr",
 		"__bbObjToStr","__bbReadStr","__bbVecAlloc",
+		"__bbCStrToStr","__bbBankData",
 		0
 	};
 	for( const char **h=helpers;*h;++h )

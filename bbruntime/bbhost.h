@@ -24,4 +24,8 @@ const char *bbhost_run( void (*entry)() );
 
 void bbhost_destroy();
 
+//Extra directory searched for userlib dylibs, after the name as given and
+//$blitzpath/userlibs (blitzcc/blitzrun pass "<their directory>/userlibs").
+void bbhost_set_userlib_dir( const char *dir );
+
 #endif

@@ -135,9 +135,11 @@ if (BB_PORTABLE_BUILD)
 	target_link_libraries(blitzrun x64link bbruntime_core)
 	add_dependencies(blitzcc blitzrun)
 	# `cmake --build build --target check_blitzcc`: run tests/blitzcc/*.bb through blitzcc.
+	add_library(blitztestlib SHARED ../tests/blitzcc/userlib/blitztestlib.cpp)
+	bb_target_options(blitztestlib)
 	add_custom_target(check_blitzcc
-		COMMAND ${CMAKE_SOURCE_DIR}/tests/blitzcc/run.sh $<TARGET_FILE:blitzcc>
-		DEPENDS blitzcc VERBATIM)
+		COMMAND ${CMAKE_SOURCE_DIR}/tests/blitzcc/run.sh $<TARGET_FILE:blitzcc> $<TARGET_FILE:blitztestlib>
+		DEPENDS blitzcc blitztestlib VERBATIM)
 
 	# IR dump tool: drives the real compiler front end into DumpCodegen
 	# (tests/x64/), used to verify x64 backend output against the x86-32 one.

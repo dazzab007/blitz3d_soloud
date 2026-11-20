@@ -5,6 +5,8 @@
 #include "bbhost.h"
 #include "bb_handle.h"
 #include <csignal>
+#include <dlfcn.h>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
 
@@ -46,13 +48,69 @@ static BBStr *bbConsoleInput( BBStr *prompt ){
 	return d_new BBStr( line );
 }
 
-//---- internal hooks the compiler calls ----
-//__bbLoadLibs(LIBS chunk): userlibs need dlopen (later step).
-static void bbLoadLibs( void *libs ){
-	if( libs && *(const char*)libs ){
-		fprintf( stderr,"warning: userlibs are not supported yet\n" );
+//---- userlibs (.decls + dylib) ----
+//The LIBS chunk the compiler emits (prognode.cpp) is, per library, its name then
+//{ proc name, 8-byte slot address }... then an empty name, ending with one more
+//empty name. Each slot is the "_f<ident>" data word the compiled code calls through.
+static std::vector<void*> s_libs;
+static std::string s_userlibDir;
+
+void bbhost_set_userlib_dir( const char *dir ){ s_userlibDir=dir ? dir : ""; }
+
+static void libNotFound(){ RTEX( "User lib not found" ); }
+static void procNotFound(){ RTEX( "User lib function not found" ); }
+
+static void *openLib( const char *name ){
+	void *mod=dlopen( name,RTLD_NOW|RTLD_LOCAL );
+	if( mod ) return mod;
+	if( const char *home=getenv( "blitzpath" ) ){
+		mod=dlopen( (std::string( home )+"/userlibs/"+name).c_str(),RTLD_NOW|RTLD_LOCAL );
+		if( mod ) return mod;
+	}
+	if( s_userlibDir.size() ){
+		mod=dlopen( (s_userlibDir+"/"+name).c_str(),RTLD_NOW|RTLD_LOCAL );
+	}
+	return mod;
+}
+
+static void bbLoadLibs( const char *p ){
+	if( !p ) return;
+	while( *p ){
+		void *mod=openLib( p );
+		p+=strlen( p )+1;
+		if( mod ) s_libs.push_back( mod );
+		while( *p ){
+			void *proc=mod ? dlsym( mod,p ) : 0;
+			p+=strlen( p )+1;
+			void *slot;
+			memcpy( &slot,p,sizeof(slot) );
+			p+=sizeof(slot);
+			*(void**)slot=proc ? proc : (mod ? (void*)procNotFound : (void*)libNotFound);
+		}
+		++p;
 	}
 }
+
+//BASIC string -> C string for userlib calls: a ring of 256 buffers, as on Windows
+//(the C function must not keep the pointer).
+static const char *bbStrToCStr( BBStr *str ){
+	static struct{ char *p;int size; } strs[256];
+	static int next=0;
+	auto &t=strs[next++ & 255];
+	int size=(int)str->size();
+	if( !t.p || t.size<size ){
+		delete[] t.p;
+		t.p=new char[size+1];
+		t.size=size;
+	}
+	memcpy( t.p,str->data(),size );
+	t.p[size]=0;
+	delete str;
+	return t.p;
+}
+static BBStr *bbCStrToStr( const char *s ){ return d_new BBStr( s ? s : "" ); }
+
+//---- internal hooks the compiler calls ----
 //debug builds: the debugger is a later step, the calls are accepted and ignored
 static void bbDebugEnter( void *frame,int env_id,const char *func ){}
 static void bbDebugLeave(){}
@@ -68,6 +126,8 @@ void bbhost_link( void (*rtSym)( const char *sym,void *pc ) ){
 	rtSym( "Write$string",RTSYM_CAST( bbConsoleWrite ) );
 	rtSym( "$Input$prompt=\"\"",RTSYM_CAST( bbConsoleInput ) );
 	rtSym( "_bbLoadLibs",RTSYM_CAST( bbLoadLibs ) );
+	rtSym( "_bbStrToCStr",RTSYM_CAST( bbStrToCStr ) );
+	rtSym( "_bbCStrToStr",RTSYM_CAST( bbCStrToStr ) );
 	rtSym( "_bbDebugEnter",RTSYM_CAST( bbDebugEnter ) );
 	rtSym( "_bbDebugLeave",RTSYM_CAST( bbDebugLeave ) );
 	rtSym( "_bbDebugStmt",RTSYM_CAST( bbDebugStmt ) );
@@ -89,6 +149,8 @@ bool bbhost_create( bool dbg,const char **err ){
 }
 
 void bbhost_destroy(){
+	for( size_t k=0;k<s_libs.size();++k ) dlclose( s_libs[k] );
+	s_libs.clear();
 	bank_destroy();
 	stream_destroy();
 	string_destroy();

@@ -25,6 +25,7 @@ static const char *VERSION_TEXT="BlitzCC (macOS x86-64 port)";
 static Environ *runtimeEnviron;
 static std::map<std::string,void*> runtimeSyms;
 static std::vector<std::string> keyWords;
+static vector<UserFunc> userFuncs;
 
 static void collect( const char *sym,void *pc ){
 	string link=rtlinkDeclare( sym,runtimeEnviron,&keyWords );
@@ -131,6 +132,18 @@ int main( int argc,char *argv[] ){
 	runtimeEnviron=d_new Environ( "",Type::int_type,0,0 );
 	bbhost_link( collect );
 
+	//userlibs: $blitzpath/userlibs, else <directory of blitzcc>/userlibs
+	string selfDir;
+	{
+		string self=x64SelfPath();
+		size_t slash=self.rfind( '/' );
+		selfDir=slash==string::npos ? string( "." ) : self.substr( 0,slash );
+	}
+	string userlibDir=selfDir+"/userlibs";
+	if( const char *home=getenv( "blitzpath" ) ) userlibDir=string( home )+"/userlibs";
+	if( const char *er=rtlinkLoadUserLibs( userlibDir,runtimeEnviron,&keyWords,userFuncs ) ) err( er );
+	bbhost_set_userlib_dir( userlibDir.c_str() );
+
 	if( showhelp ) showHelp();
 	if( dumpkeys ) dumpKeys( dumphelp );
 	if( versinfo ) cout<<VERSION_TEXT<<endl;
@@ -163,7 +176,6 @@ int main( int argc,char *argv[] ){
 		environ=prog->semant( runtimeEnviron );
 
 		if( !veryquiet ) cout<<"Translating..."<<endl;
-		vector<UserFunc> userFuncs;
 		prog->translate( &codegen,userFuncs );
 		codegen.flush();
 	}catch( Ex &x ){
@@ -179,9 +191,7 @@ int main( int argc,char *argv[] ){
 	if( !x64Export( holder,codegen,module ) ) err( "Code generation failed" );
 	if( out_file.size() ){
 		//the launcher (blitzrun) lives next to blitzcc; the program is appended to a copy of it
-		string self=x64SelfPath();
-		size_t slash=self.rfind( '/' );
-		string launcher=(slash==string::npos ? string( "." ) : self.substr( 0,slash ))+"/blitzrun";
+		string launcher=selfDir+"/blitzrun";
 		if( !veryquiet ) cout<<"Creating executable \""<<out_file<<"\"..."<<endl;
 		string why;
 		if( !x64WriteExe( launcher,out_file,module,debug ? X64EXE_DEBUG : 0,why ) ){

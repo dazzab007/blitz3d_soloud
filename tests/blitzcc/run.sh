@@ -5,12 +5,19 @@
 #   ; rc: 1          expected exit status (default 0)
 # Every program is also built with `blitzcc -o` and the executable must give the same
 # output and exit status. blitzrun must sit next to blitzcc.
-# Usage: run.sh /path/to/blitzcc [--update]
+# $blitzpath is set to a scratch directory whose userlibs/ holds userlib/*.decls and the
+# test dylib, so userlib programs run with blitzcc and as executables.
+# Usage: run.sh /path/to/blitzcc /path/to/libblitztestlib.dylib [--update]
 BLITZCC="$1"
-UPDATE="$2"
+TESTLIB="$2"
+UPDATE="$3"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 pass=0; fail=0
 TMP="$(mktemp -d)"
+mkdir -p "$TMP/home/userlibs"
+cp "$DIR"/userlib/*.decls "$TMP/home/userlibs/"
+cp "$TESTLIB" "$TMP/home/userlibs/"
+export blitzpath="$TMP/home"
 trap 'rm -rf "$TMP"' EXIT
 for src in "$DIR"/*.bb; do
 	name="$(basename "$src" .bb)"

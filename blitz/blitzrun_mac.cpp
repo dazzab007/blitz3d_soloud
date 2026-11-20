@@ -21,6 +21,14 @@ int main( int argc,char *argv[] ){
 	}
 
 	bbhost_link( collect );
+	{
+		//userlib dylibs: $blitzpath/userlibs, then <directory of this executable>/userlibs
+		std::string self=x64SelfPath();
+		size_t slash=self.rfind( '/' );
+		static std::string dir;
+		dir=(slash==std::string::npos ? std::string( "." ) : self.substr( 0,slash ))+"/userlibs";
+		bbhost_set_userlib_dir( dir.c_str() );
+	}
 
 	X64Loader loader;
 	if( !loader.load( module,g_syms ) ){

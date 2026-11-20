@@ -175,7 +175,20 @@ bool bank_destroy(){
 	return true;
 }
 
+#ifndef _WIN32
+//Userlib '*' parameter given a bank handle (the compiler emits a call to this):
+//the bank's data pointer. Windows reads it straight from the bank pointer.
+void *_bbBankData( int handle ){
+	void *vp=g_handle_table.lookup( handle,HT_BANK );
+	if( !vp ) RTEX( "Invalid bank passed to a userlib function" );
+	return static_cast<bbBank*>( vp )->data;
+}
+#endif
+
 void bank_link( void(*rtSym)(const char*,void*) ){
+#ifndef _WIN32
+	rtSym( "_bbBankData",(void*)_bbBankData );
+#endif
 	rtSym( "%CreateBank%size=0",RTSYM_CAST(bbCreateBank) );
 	rtSym( "FreeBank%bank",RTSYM_CAST(bbFreeBank) );
 	rtSym( "%BankSize%bank",RTSYM_CAST(bbBankSize) );

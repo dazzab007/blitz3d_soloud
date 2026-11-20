@@ -99,13 +99,20 @@ TNode *ExprSeqNode::translate( Codegen *g,bool cfunc ){
 			}else if( ty->structType() ){
 				q=d_new TNode( IR_MEM,q ); q->wide=true; // D4: deref object pointer
 			}else if( ty==Type::void_type ){
+#ifdef _WIN32
 				q=d_new TNode( IR_MEM,add(q,iconst(4)) ); // void* param: skip to next slot (int)
+#else
+				//an int handle (a bank) passed to a '*' param: the handle is a table
+				//index here, not a pointer, so ask the runtime for the data pointer
+				q=call( "__bbBankData",q ); // returns void* (wide)
+#endif
 			}
 		}
 
 		TNode *p;
 		p=d_new TNode( IR_ARG,0,0,k*BB_SLOT );
-		p=mem( p,isWideType( exprs[k]->sem_type ) ); // D4: tag arg slot stores
+		//D4: tag arg slot stores; a '*' argument (sem_type void) is a pointer too
+		p=mem( p,isWideType( exprs[k]->sem_type ) || (cfunc && isWideNode( q )) );
 		p=d_new TNode( IR_MOVE,q,p );
 		p->wide=p->r->wide; // MOVE is wide if dest MEM is wide
 		p=d_new TNode( IR_SEQ,p,0 );
